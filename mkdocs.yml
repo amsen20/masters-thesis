@@ -1,0 +1,58 @@
+site_name: Linear capturing types is all you need (for static memory management)
+site_description: A thesis on static memory management in Scala.
+site_url: 
+
+# Using the popular Material theme
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: light blue
+  features:
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+
+# Navigation (Table of Contents)
+nav:
+  - Home: index.md
+  - Introduction: introduction/index.md
+  - Background:
+    - Overview: background/index.md
+    - Scala native: background/scala-native.md
+    - Capturing types: background/capturing-types.md
+    - Linear types: background/linear-types.md
+    - Ownership: background/ownership.md
+  - Scinear A linear type plugin for Scala:
+    - Overview: scinear/index.md
+    - Definitions: scinear/definitions.md
+    - Polymorphism: scinear/polymorphism.md
+    - Capture sets: scinear/capture-sets.md
+    - Plugin implementation: scinear/plugin-implementation.md
+  - Static memory management library `imem`:
+    - Overview: imem/index.md
+    - Runtime model: imem/runtime-model.md
+    - Ownership by linearity: imem/ownership-by-linearity.md
+    - Borrow checking by capture tracking: imem/borrow-checking-by-capture-tracking.md
+    - Scala native integration: imem/scala-native-integration.md
+  - Evaluation:
+    - Overview: evaluation/index.md
+    - Case study: evaluation/case-study.md
+  - Related works:
+    - Overview: related-works/index.md
+    - Dynamic memory management: related-works/dynamic-memory-management.md
+    - Static memory management: related-works/static-memory-management.md
+  - Conclusion: conclusion/index.md
+
+# Extensions for better Markdown and syntax highlighting
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
