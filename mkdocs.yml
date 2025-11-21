@@ -15,6 +15,11 @@ theme:
     - search.suggest
     - search.highlight
 
+# Plugins
+plugins:
+  - search
+  - print-site
+
 # Navigation (Table of Contents)
 nav:
   - Home: index.md
@@ -27,7 +32,7 @@ nav:
     - Ownership: background/ownership.md
   - Scinear A linear type plugin for Scala:
     - Overview: scinear/index.md
-    - Definitions: scinear/definitions.md
+    - Defining linear types: scinear/defining-linear-types.md
     - Polymorphism: scinear/polymorphism.md
     - Capture sets: scinear/capture-sets.md
     - Plugin implementation: scinear/plugin-implementation.md
