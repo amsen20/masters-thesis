@@ -5,7 +5,7 @@ Defining a linear type is the same as defining a standard type in Scala. A type 
 ```Scala
 import scinear.Linear
 
-class MyLinearType extends Linear
+class LinearInt(val value: Int) extends Linear
 ```
 
 [The original linear types paper](https://www.researchgate.net/profile/Philip-Wadler/publication/2429119_Linear_Types_Can_Change_the_World/links/6410b420315dfb4cce7cf9bc/Linear-Types-Can-Change-the-World.pdf) views linear types as immutable algebraic data types. Scinear adopts this foundational definition by enforcing specific rules on field and method definitions within a linear type.
