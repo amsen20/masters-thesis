@@ -83,3 +83,13 @@ Capturing a linear term in a closure poses a problem. Multiple evaluations of th
 ```Scala
 TODO AN EXAMPLE WITH RECURSION
 ```
+
+## Fields in other types
+
+Following the [original linearity paper]((https://www.researchgate.net/profile/Philip-Wadler/publication/2429119_Linear_Types_Can_Change_the_World/links/6410b420315dfb4cce7cf9bc/Linear-Types-Can-Change-the-World.pdf)), Scinear does not allow other types to have linear fields.
+
+***Scinear-usage-nonlinear-type-field-rule:*** Nonlinear types should not have linear fields.
+
+```Scala
+TODO A SMALL EXAMPLE
+```
