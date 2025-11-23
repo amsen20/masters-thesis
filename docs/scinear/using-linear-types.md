@@ -1,4 +1,4 @@
-## Using Linear Types
+# Using Linear Types
 
 Scinear enforces usage rules throughout the program to correctly track terms with linear type usages. These constraints ensure that the program mentions linear terms exactly once.
 
