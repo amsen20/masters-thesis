@@ -4,7 +4,7 @@ Standard Scala 3 codebases use different aspects of polymorphism. Scinear integr
 
 ## Polymorphic promotion
 
-The Scala standard library contains a rich set of types, such as `Option[T]` and `List[T]`. Redefining linear versions for the entire library proves impractical. Scinear defines the following to address this limitation:
+The Scala standard library contains a rich set of types. Redefining linear versions for the entire library proves impractical. Scinear defines the following to address this limitation:
 
 ***Scinear-polymorphic-promotion-rule:*** Scinear assumes a polymorphic nonlinear type is linear if it uses a linear type as a type parameter.
 
@@ -12,9 +12,13 @@ The Scala standard library contains a rich set of types, such as `Option[T]` and
 TODO AN EXAMPLE WITH EXPLANATION
 ```
 
-The primary motivation for this rule is to prevent polymorphic types from holding linear fields without becoming linear themselves. However, the internal implementation of promoted types may violate Scinear rules. Scinear emits a warning when promotions occur.
+The primary motivation for this rule is to prevent polymorphic types from holding linear fields without becoming linear themselves. However, the internal implementation of promoted types may violate Scinear rules.
 
-This rule presents a trade-off between practicality and soundness. Scinear could preserve soundness by disallowing method calls on promoted types. However, this forces the developer to define a linear version of each method, which is impractical.
+This rule presents a trade-off between practicality and soundness. To preserve soundness, Scinear enforces a restrictive rule.
+
+***Scinear-polymorphic-promotion-limitation-rule:*** Scinear only promotes `Option` and `Tuple` types. Other nonlinear types can have a type parameter instantiated with linear types if they are annotated with `@HideLinearity`.
+
+Linear types require the ability to decompose into fields to be practical. Scala implements this decomposition by returning an `Option[Tuple[...]]` of fields during `match-case` and `unapply` operations. This means that support for these two types is inevitable. Additionally, their simplicity ensures they are safe to promote.
 
 ## Polymorphic function calls
 

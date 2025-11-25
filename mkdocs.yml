@@ -37,6 +37,7 @@ nav:
     - Using linear types: scinear/using-linear-types.md
     - Polymorphism: scinear/polymorphism.md
     - Capture checking: scinear/capture-checking.md
+    - Memory model: scinear/memory-model.md
     - Plugin implementation: scinear/plugin-implementation.md
   - Static memory management library `imem`:
     - Overview: imem/index.md
