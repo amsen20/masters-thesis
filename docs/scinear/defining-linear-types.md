@@ -21,13 +21,33 @@ This rule manages access scope. It allows some linear fields to use other linear
 
 The construction phase starts with the class parameters and then proceeds through the statements in program order. The [usage section](./using-linear-types.md) explains the order's effect.
 
-TODO AN EXAMPLE HERE AND ITS EXPLANATION
+```Scala
+class LinearDouble(val value: Double) extends Linear
+
+class LinearCircle(val r: LinearDouble) extends Linear:
+  val circumference = LinearDouble(2 * math.Pi * r.value)
+end LinearCircle
+
+@main def main(): Unit =
+  val circle = LinearCircle(LinearDouble(5.0))
+  // circle.r <-- error accessing an internal member
+  circle.circumference // ok external member access
+end main
+```
 
 ***Scinear-fields-rule-2:*** All fields should be strictly evaluated values (val), not variables (var) or lazy values (lazy val). Each field’s type can be either linear or non-linear.
 
 This rule enforces immutability on linear types and simplifies the evaluation order.
 
-TODO AN EXAMPLE HERE AND ITS EXPLANATION
+```Scala
+class LinearList(val next: LinearList) extends Linear:
+  // var size: Int = 1 + next.size <-- error variable field
+
+  // lazy val size: Int = 1 + next.size <-- error lazy val field
+
+  val size: Int = 1 + next.size // ok
+end LinearList
+```
 
 ## Method Definition Rules
 
@@ -35,13 +55,24 @@ TODO AN EXAMPLE HERE AND ITS EXPLANATION
 
 This rule prevents linear fields from leaking into methods. This restriction ensures the type functions similarly to a datatype. Concurrently, the method exemptions maintain practicality within a standard Scala 3 codebase.
 
-TODO AN EXAMPLE HERE AND ITS EXPLANATION
+```Scala
+class LinearList(val next: LinearList) extends Linear:
+  def getSize: Int = 1 + next.getSize // error `next` is not accessible here
+end LinearList
+```
 
 ## Complementary Rules
 
 ***Scinear-self-reference-rule:*** `this` keyword should never refer to a linear type.
 
 By following this rule, the initialization process does not consume the instance. Thus, after creating a linear type instance, the creator can use it. Furthermore, a method invocation does not reuse the instance.
+
+```Scala
+class LinearList(val data: Int, val next: LinearList) extends Linear:
+  def append(newData: Int): LinearList =
+    LinearList(newData, this) // error `this` is not allowed to refer to linear values
+end LinearList
+```
 
 ***Scinear-inheritance-rule:*** A linear type can only extend other linear types or `Object`.
 
