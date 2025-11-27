@@ -45,13 +45,10 @@ end select
 
 Scinear starts with the `match` expression. This means that the cases and the rest of the program cannot refer to the linear terms mentioned in this expression. Because there is no traversal order among cases, the plugin marks a linear term as used for the remainder of the program if the term appears in at least one `case` expression.
 
+<span id="linear-list-addToHead"></span>
 ```Scala
 trait LinearList extends Linear
 class Cons(val head: Int, val tail: LinearList) extends LinearList
-object Cons:
-  def unapply(l: Cons): Option[(Int, LinearList)] =
-    Some((l.head, l.tail))
-end Cons
 class Nil() extends LinearList
 
 def addToHead(lst: LinearList, offset: LinearInt): LinearList = lst match

@@ -8,15 +8,29 @@ The Scala standard library contains a rich set of types. Redefining linear versi
 
 ***Scinear-polymorphic-promotion-rule:*** Scinear assumes a polymorphic nonlinear type is linear if it uses a linear type as a type parameter.
 
-```Scala
-TODO AN EXAMPLE WITH EXPLANATION
-```
-
 The primary motivation for this rule is to prevent polymorphic types from holding linear fields without becoming linear themselves. However, the internal implementation of promoted types may violate Scinear rules.
 
-This rule presents a trade-off between practicality and soundness. To preserve soundness, Scinear enforces a restrictive rule.
+This rule presents a trade-off between practicality and soundness. To preserve soundness, Scinear enforces a rule that limits polymorphic promotion's scope.
 
 ***Scinear-polymorphic-promotion-limitation-rule:*** Scinear only promotes `Option` and `Tuple` types. Other nonlinear types can have a type parameter instantiated with linear types if they are annotated with `@HideLinearity`.
+
+The [`addToHead` example](/docs/scinear/using-linear-types.md#linear-list-addToHead) requires implementing an `unapply` method to actually work.
+```Scala
+object Cons:
+  def unapply(l: Cons): Option[(Int, LinearList)] =
+    Some((l.head, l.tail)) // Scinear exempts `unapply` method body from any linear rule.
+end Cons
+```
+The following example presents an alternative implementation of `addToHead` for `Cons`.
+```Scala
+def addToHead(cons: Cons, offset: LinearInt): Cons =
+  val deconstructedOpt = Cons.unapply(cons) // promoted `Option`
+  val deconstructed = deconstructedOpt.get // promoted `Tuple`
+  val (head, tail) = deconstructed
+  val updatedHead = head + offset.value
+  Cons(updatedHead, tail)
+end addToHead
+```
 
 Linear types require the ability to decompose into fields to be practical. Scala implements this decomposition by returning an `Option[Tuple[...]]` of fields during `match-case` and `unapply` operations. This means that support for these two types is inevitable. Additionally, their simplicity ensures they are safe to promote.
 
@@ -30,20 +44,28 @@ Polymorphic functions prevent code duplication. Furthermore, they are common in 
 2. $T$ is annotated with `@HideLinearity` annotation: Scinear emits a warning and continues.  
 3. Otherwise, Scinear emits an error.
 
-In the first case, Scinear validates the function body with the knowledge that $T$ is linear. 
-
-```Scala
-TODO AN EXAMPLE OF FIRST CASE
-```
-
+In the first case, Scinear validates the function body with the knowledge that $T$ is linear.
 The second case is a way for developers to implement functions that do not follow linearity rules while still having linear parameters.
-
-```Scala
-TODO AN EXAMPLE OF THE SECOND CASE
-```
-
 The last case prevents unintentional leakage of linear values through polymorphic interfaces.
 
 ```Scala
-TODO AN EXAMPLE OF THE THIRD CASE
+class LinearInt(val value: Int) extends Linear
+
+def LinearIdentity[T <: Linear](x: T): T = // case 1
+	// println(x) <-- error: would result in using `x` twice
+	x
+end LinearIdentity
+
+def logIdentity[@HideLinearity T](x: T): T = // case 2
+	println(x)
+	x
+end logIdentity
+
+def normalIdentity[T](x: T): T = x // case 3
+
+def checkIdentity(): Unit =
+	LinearIdentity(LinearInt(42)) // ok
+	logIdentity(LinearInt(42)) // ok
+	normalIdentity(LinearInt(42)) // error: cannot pass linear value as polymorphic parameter
+end checkIdentity
 ```
