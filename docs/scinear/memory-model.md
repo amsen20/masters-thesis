@@ -12,7 +12,7 @@ In the absence of `@HideLinearity`, references to a linear type are not stored w
 
 Reachable linear objects form a tree rooted in the program environment. The children of this root are the linear terms currently available in the environment, and the remaining nodes are linear values stored within other linear values. Additionally, linear values may refer to nonlinear values. The following figure demonstrates this memory overview:
 
-TODO FIGURE OF MEMORY OVERVIEW (ADD OPTION AND TUPLE TOO)
+![Memory model overview](../img/linear-memory-overview.png){: width="700"}
 
 ### Why
 
