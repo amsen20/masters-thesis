@@ -24,12 +24,12 @@ The construction phase starts with the class parameters and then proceeds throug
 ```Scala
 class LinearDouble(val value: Double) extends Linear
 
-class LinearCircle(val r: LinearDouble) extends Linear:
+class Circle(val r: LinearDouble) extends Linear:
   val circumference = LinearDouble(2 * math.Pi * r.value)
-end LinearCircle
+end Circle
 
 @main def main(): Unit =
-  val circle = LinearCircle(LinearDouble(5.0))
+  val circle = Circle(LinearDouble(5.0))
   // circle.r <-- error accessing an internal member
   circle.circumference // ok external member access
 end main

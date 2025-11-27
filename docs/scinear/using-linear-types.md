@@ -9,7 +9,14 @@ Keep in mind that the AST traversal order defined [here](/docs/background/scala-
 ***Scinear-usage-at-least-rule:*** Each term $t$ with a static linear type in a Scala program AST is at least used once.
 
 ```Scala
-TODO A SIMPLE EXAMPLE
+class LinearInt(val value: Int) extends Linear
+
+@main def main(): Unit =
+  val x = LinearInt(1)
+  val y = LinearInt(2)
+  val z = // error haven't used `z` at all
+    LinearInt(x.value + y.value) // cannot use `x`` or `y` after this point
+end main
 ```
 
 ## Control flow
@@ -21,7 +28,17 @@ Usage rules influence the validity of linear terms within control-flow structure
 Scinear first traverses the condition expression. This means that the then expression, the else expression, and the rest of the program cannot refer to linear terms mentioned in the condition. Because there is no traversal order between the then and else expressions, both expressions can refer to the same linear terms. However, the plugin marks a linear term as used for the remainder of the program if the term appears in at least one branch.
 
 ```Scala
-TODO AN EXAMPLE
+class LinearInt(val value: Int) extends Linear
+
+def select(a: LinearInt, b: LinearInt, c: LinearInt, d: LinearInt): LinearInt =
+  if (a.value > b.value)
+    // cannot use `a` and `b` here
+    d
+  else
+    // cannot use `a` and `b` here
+    c
+  // cannot use `a`, `b`, `c`, and `d` here
+end select
 ```
 
 ### Case-Match Expressions
@@ -29,7 +46,23 @@ TODO AN EXAMPLE
 Scinear starts with the `match` expression. This means that the cases and the rest of the program cannot refer to the linear terms mentioned in this expression. Because there is no traversal order among cases, the plugin marks a linear term as used for the remainder of the program if the term appears in at least one `case` expression.
 
 ```Scala
-TODO AN EXAMPLE
+trait LinearList extends Linear
+class Cons(val head: Int, val tail: LinearList) extends LinearList
+object Cons:
+  def unapply(l: Cons): Option[(Int, LinearList)] =
+    Some((l.head, l.tail))
+end Cons
+class Nil() extends LinearList
+
+def addToHead(lst: LinearList, offset: LinearInt): LinearList = lst match
+  case Cons(head, tail) =>
+    // cannot use `lst` here
+    Cons(head + offset.value, tail)
+  case nil: Nil =>
+    // cannot use `lst` here
+    nil
+  // cannot use `lst` and `offset` here
+end addToHead
 ```
 
 ### Try-Catch-Finally Expressions
@@ -37,7 +70,16 @@ TODO AN EXAMPLE
 Scinear traverses the try expression first. This means that the catch clauses, the finally block, and the rest of the program cannot refer to linear terms mentioned in the try block. Because there is no traversal order between catch clauses, these clauses can refer to the same linear terms. Scinear traverses the finally expression last. Consequently, this block can only use linear terms that remain unused in the try block or in any catch clause.
 
 ```Scala
-TODO AN EXAMPLE (WITH DEFINING A LINEAR TERM IN A BLOCK)
+def tryF(f: LinearInt => LinearInt, x: LinearInt, default: LinearInt): LinearInt =
+  try
+    val y = LinearInt(x.value + 1) // local to this block
+    f(y)
+  catch
+    case _ =>
+      // cannot use `f` and `x` here
+      default
+  // cannot use `f`, `x` and `default` here
+end tryF
 ```
 
 ### Loops
@@ -49,12 +91,23 @@ Scinear enforces a new rule on loops to ensure linearity.
 This rule prevents a loop from consuming linear values multiple times at runtime.
 
 ```Scala
-TODO AN EXAMPLE OF WHILE
-```
+def length(lst: LinearList): Int =
+  var curr = lst
+  var len = 0
 
-```Scala
-TODO AN EXAMPLE OF FOR
+  while !curr.isInstanceOf[Nil] do // error cannot use `curr` in loop's condition
+    curr = curr match // error cannot use `curr` in loop's body
+      case Cons(_, tail) =>
+        tail
+      case nil: Nil =>
+        nil
+    len += 1
+  end while
+  
+  len
+end length
 ```
+This example demonstrates an incorrect implementation of a length function for a linear linked list. The correct approach is using recursion, which next section describes.
 
 Recursion offers an alternative approach to this restriction. A recursive function safely consumes a linear value multiple times at runtime. The following section describes this alternative.
 
@@ -75,14 +128,26 @@ Scinear views functions as generalized methods. Consequently, the plugin enforce
 ***Scinear-usage-function-rule:*** Function bodies and closures can only use linear terms present in their parameter list.
 
 ```Scala
-TODO A SIMPLE EXAMPLE
+def add(x: LinearInt, y: LinearInt): LinearInt =
+  def addByXDef(z: LinearInt): LinearInt = 
+    LinearInt(x.value + z.value) // error: `x` cannot be accessed here
+  
+  val addByXClosure = (z: LinearInt) => 
+    LinearInt(x.value + z.value) // error: `x` cannot be accessed here
+  
+  LinearInt(x.value + y.value) // ok
+end add
 ```
 
 Capturing a linear term in a closure poses a problem. Multiple evaluations of the closure expression consume the linear value multiple times. The [main linearity paper](https://www.researchgate.net/profile/Philip-Wadler/publication/2429119_Linear_Types_Can_Change_the_World/links/6410b420315dfb4cce7cf9bc/Linear-Types-Can-Change-the-World.pdf) addresses this issue by treating the closure itself as a linear value. However, Scinear avoids this complexity by enforcing [the rule above](#scinear-usage-function-rule), at the expense of expressiveness.
 
 ```Scala
-TODO AN EXAMPLE WITH RECURSION
+def length(lst: LinearList): Int = lst match
+  case Cons(head, tail) => 1 + length(tail)
+  case nil: Nil => 0
+end length
 ```
+This example demonstrates the recursion approach to list length.
 
 ## Fields in other types
 
@@ -91,5 +156,5 @@ Following the [original linearity paper]((https://www.researchgate.net/profile/P
 ***Scinear-usage-nonlinear-type-field-rule:*** Nonlinear types should not have linear fields.
 
 ```Scala
-TODO A SMALL EXAMPLE
+class Buffer(val list: LinearList) // error: Non-linear types are not allowed to store linear values
 ```
