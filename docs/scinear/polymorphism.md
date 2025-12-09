@@ -26,7 +26,7 @@ However, this strategy is unsound because the internal implementation of promote
 Furthermore, banning all linear instantiations is impractical because linear types require the ability to decompose into fields.
 Scala implements this decomposition by returning an `Option[Tuple[...]]` of fields during `match-case` and `unapply` operations.
 This means that supporting linear type arguments for these two polymorphic types is inevitable.
-As an example, the [`addToHead` example](/docs/scinear/using-linear-types.md#linear-list-addToHead) requires implementing an `unapply` method to actually work:
+As an example, the [`addToHead` example](./using-linear-types.md#linear-list-addToHead) requires implementing an `unapply` method to actually work:
 ```Scala
 object Cons:
   def unapply(l: Cons): Option[(Int, LinearList)] =

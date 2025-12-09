@@ -1,7 +1,7 @@
 # Capture checking
 
 Scala includes a new experimental feature called capture checking.
-[Based on this section](/docs/background/capturing-types.md), a capture set consists of a set of capabilities.
+[Based on this section](../background/capturing-types.md), a capture set consists of a set of capabilities.
 A capture set appears in a type in two locations:
 
 * As a capturing type's capture set annotation: `T^{/* capture set */}`

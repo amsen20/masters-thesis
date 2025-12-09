@@ -9,7 +9,7 @@ For simplicity, this section only concerns programs that do not cast linear type
 
 ### Memory Overview
 
-In the absence of `@HideLinearity`, references to a linear type are not stored within a nonlinear type, other than `Option` and `Tuple`, due to the [nonlinear-type-field-rule](/docs/scinear/using-linear-types.md#fields-in-other-types).
+In the absence of `@HideLinearity`, references to a linear type are not stored within a nonlinear type, other than `Option` and `Tuple`, due to the [nonlinear-type-field-rule](./using-linear-types.md#fields-in-other-types).
 Additionally, linear values are accessible only by other linear values or by linear references.
 
 Reachable linear values form a tree rooted in the current execution scope.
