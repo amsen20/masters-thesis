@@ -5,3 +5,6 @@ Here, a brief overview of capture tracking and capabilities is mentioned. It's f
 ## Exclusive capabilities
 
 The same as Capturing types.
+
+<!-- TODO: define avoidance -->
+<!-- TODO: mention the categorization of capture set appearing in a type in background, and elaborate on it. -->

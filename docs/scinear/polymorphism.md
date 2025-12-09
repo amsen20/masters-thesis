@@ -1,26 +1,49 @@
 # Polymorphism
 
-Standard Scala 3 codebases use different aspects of polymorphism. Scinear integrates linear types into this polymorphism through two rules.
+Standard Scala 3 codebases use different aspects of polymorphism.
+Scinear integrates linear types into this polymorphism through two rules.
 
 ## Polymorphic promotion
 
-The Scala standard library contains a rich set of types. Redefining linear versions for the entire library proves impractical. Scinear defines the following to address this limitation:
+Instantiating a polymorphic type with a linear type argument results in a nonlinear value that stores a linear value, as below:
+```Scala
+val ls: List[LinearInt] = List(LinearInt(42))
+ls(0) // accessing to a linear value
+ls(0) // accessing to a linear value
+```
+This outcome contradicts [the main linearity paper](https://www.researchgate.net/profile/Philip-Wadler/publication/2429119_Linear_Types_Can_Change_the_World/links/6410b420315dfb4cce7cf9bc/Linear-Types-Can-Change-the-World.pdf)'s rule that nonlinear values cannot retain linear values.
+Also, Scinear enforces a [specific rule](./using-linear-types.md#scinear-usage-nonlinear-type-field-rule) to prevent nonlinear classes from storing linear fields.
+But this rule is limited to class definitions.
+Scinear addresses linear instantiations through linear promotion.
 
-***Scinear-polymorphic-promotion-rule:*** Scinear assumes a polymorphic nonlinear type is linear if it uses a linear type as a type parameter.
+***Linear promotion***:
+If Scinear promotes a nonlinear type, the plugin enforces all linearity rules on that instances of that type.
+Put another way, Scinear treats promoted types as linear types.
 
-The primary motivation for this rule is to prevent polymorphic types from holding linear fields without becoming linear themselves. However, the internal implementation of promoted types may violate Scinear rules.
+One approach is to promote all linear instantiations of polymorphic types.
+However, this strategy is unsound because the internal implementation of promoted types may violate Scinear rules.
 
-This rule presents a trade-off between practicality and soundness. To preserve soundness, Scinear enforces a rule that limits polymorphic promotion's scope.
-
-***Scinear-polymorphic-promotion-limitation-rule:*** Scinear only promotes `Option` and `Tuple` types. Other nonlinear types can have a type parameter instantiated with linear types if they are annotated with `@HideLinearity`.
-
-The [`addToHead` example](/docs/scinear/using-linear-types.md#linear-list-addToHead) requires implementing an `unapply` method to actually work.
+Furthermore, banning all linear instantiations is impractical because linear types require the ability to decompose into fields.
+Scala implements this decomposition by returning an `Option[Tuple[...]]` of fields during `match-case` and `unapply` operations.
+This means that supporting linear type arguments for these two polymorphic types is inevitable.
+As an example, the [`addToHead` example](/docs/scinear/using-linear-types.md#linear-list-addToHead) requires implementing an `unapply` method to actually work:
 ```Scala
 object Cons:
   def unapply(l: Cons): Option[(Int, LinearList)] =
     Some((l.head, l.tail)) // Scinear exempts `unapply` method body from any linear rule.
 end Cons
 ```
+Moreover, the simplicity of `Option[T]` and `Tuple[T]` ensures that promoting these types is safe.
+
+To address all the discussed issues safely Scinear enforces a minimal promotion rule.
+
+***Scinear-polymorphic-promotion-rule:***
+If a method parameter, class parameter, local variable, or a `this` reference `v` possesses type $T[T_1, ..., T_n]$ where $T$ is not a linear type and type parameter $T_i$ is instantiated with a linear type, one of the following cases applies:
+
+1. If $T$ is `Option` or `Tuple`, Scinear promotes $T$ to a linear type and treats `v` as a linear reference.
+2. If $T_i$ has the `@HideLinearity` annotation, Scinear emits a warning.
+3. Otherwise, Scinear emits an error.
+
 The following example presents an alternative implementation of `addToHead` for `Cons`.
 ```Scala
 def addToHead(cons: Cons, offset: LinearInt): Cons =
@@ -32,16 +55,17 @@ def addToHead(cons: Cons, offset: LinearInt): Cons =
 end addToHead
 ```
 
-Linear types require the ability to decompose into fields to be practical. Scala implements this decomposition by returning an `Option[Tuple[...]]` of fields during `match-case` and `unapply` operations. This means that support for these two types is inevitable. Additionally, their simplicity ensures they are safe to promote.
-
 ## Polymorphic function calls
 
-Polymorphic functions prevent code duplication. Furthermore, they are common in the Scala standard library. Calling these functions with linear values instantiates type parameters with linear types. Scinear follows a specific rule to track this instantiation.
+Polymorphic functions prevent code duplication.
+Plus, they are common in the Scala standard library.
+Calling these functions with linear values instantiates type parameters with linear types.
+Scinear follows a specific rule to track this instantiation.
 
 ***Scinear-polymorphic-function-call-rule:*** During a function call, if type parameter $T$ is instantiated with a linear type, three cases can happen:
 
-1. $T$ is statically known to be linear: Scinear continues with no errors or warnings.  
-2. $T$ is annotated with `@HideLinearity` annotation: Scinear emits a warning and continues.  
+1. $T$ has a linear upper bound: Scinear continues with no errors or warnings.
+2. $T$ is annotated with `@HideLinearity` annotation: Scinear emits a warning.
 3. Otherwise, Scinear emits an error.
 
 In the first case, Scinear validates the function body with the knowledge that $T$ is linear.

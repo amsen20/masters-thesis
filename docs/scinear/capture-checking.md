@@ -1,16 +1,25 @@
 # Capture checking
 
-Scala includes a new experimental feature called capture checking. [Based this section](/docs/background/capturing-types.md), a capture set consists of a set of terms and the universal capability (`cap`). A type includes a capture set in two locations:
+Scala includes a new experimental feature called capture checking.
+[Based on this section](/docs/background/capturing-types.md), a capture set consists of a set of capabilities.
+A capture set appears in a type in two locations:
 
-* As a type parameter: `T[CS^={...}]`  
-* The type’s capturing set: `T^{...}`
+* As a capturing type's capture set annotation: `T^{/* capture set */}`
+* As a type argument instantiating a type parameter with a capture set: `T[{/* capture set */}]`.
 
-***Scinear-capture-set-rule:*** Let AST node $u$ be an expression of type $T$. Assume $T$ has a capture set type parameter $CS$ that mentions a linear term $l$. No node $v$ that precedes $u$ in traversal order may mention $l$.
+***Linear capability:***
+A linear capability is a capability whose type is linear.
+In other words, the capability's type extends the `scinear.Linear` trait.
 
-This rule disallows mentioning a linear term in a capture set after the linear term has expired.
+***Scinear-capture-set-rule:***
+Let AST node $u$ be an expression of type $T$.
+Assume $T$ has a type parameter $CS >: caps.CapSet$ that the argument instantiating it includes a linear capability $l$.
+$l$ should not be expired in node $u$ meaning no node $v$ that precedes $u$ in traversal order may refer to $l$.
+
+This rule disallows mentioning a linear reference, which is also a capability, in a capture set after the program has used it.
 
 ```Scala
-class Tracker[LinearTerms^]:
+class Tracker[LinearCaps^]:
 	def check(): Unit = ()
 end Tracker
 
@@ -25,15 +34,20 @@ def main(): Unit =
 	println(y.value)
 end main
 ```
-In this example, `Tracker` is a nonlinear type that tracks linear terms within its capture set parameter. 
-The program can refer to `tracker` only if all terms in its capture set, `{x, y}`, exist and are not expired.
+In this example, `Tracker` is a nonlinear type that tracks linear capabilities within its type parameter `LinearCaps`.
+The program can refer to `tracker` only if all linear capabilities in the `LinearCaps` type argument, `{x, y}` in the example above, are not expired.
 
-Keep in mind that this rule only tracks capture sets in type parameters. However, capturing sets may still include an expired linear term. The `imem`’s use case motivates this design choice. 
+Keep in mind that this rule only tracks capture sets that instantiate a type parameter.
+However, capture sets annotating capturing types may still include an expired linear capabilities.
+The `imem`’s use case motivates this design choice.
 
-In general, the developer has less control over capturing sets than over the capture set type parameters.
-The capturing set can resolve to `{cap}` at any program point. This resolution is more restrictive than the original set. However, it excludes the linear term.
+In general, capture sets annotating capturing types are covariant.
+This covariance means that they can be widened to `{cap}` through avoidance at any point in the program.
+The widened capture set, `{cap}`, is more restrictive than the original set.
+However, it excludes the linear capability.
 
-The following example uses an `Object`'s capture set to track `{x, y}`. Scinear enforces no limitations on `tracker` in this case.
+The following example uses an `Object`'s capture set to track `{x, y}`.
+Scinear enforces no limitations on `tracker` in this case.
 Also, this example demonstrates that the tracking list is easily eliminated through avoidance.
 ```Scala
 @main
