@@ -20,7 +20,7 @@ Scinear adopts this view by enforcing specific rules on field and method definit
 
 In Scala, a class field may reference other fields within the same class during initialization.
 However, this access violates the [linearity rule](../background/linear-types.md#main-linearity-rule) during the construction of linear classes.
-For example in the following example:
+For example, consider the following definitions:
 
 ```Scala
 class LinearDouble(val value: Double) extends Linear
