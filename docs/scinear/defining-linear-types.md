@@ -56,7 +56,7 @@ The [usage section](./using-linear-types.md) explains the order's effect.
 
 ### Fields immutability
 
-The program reads a field of a linear instance only once. So defining variable fields in a linear class is unnecessary.
+The program reads each field of a linear instance only once, so defining mutable fields in a linear class is unnecessary.
 
 ***Scinear-fields-rule-2:***
 All fields of a linear class should be strictly evaluated values (val), not variables (var) or lazy values (lazy val).
