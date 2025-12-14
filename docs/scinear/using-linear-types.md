@@ -27,7 +27,7 @@ class LinearInt(val value: Int) extends Linear
   val x = LinearInt(1)
   val y = LinearInt(2)
   val z = // error haven't used `z` at all
-    LinearInt(x.value + y.value) // cannot use `x`` or `y` after this point
+    LinearInt(x.value + y.value) // cannot use `x` or `y` again after this point
 end main
 ```
 
