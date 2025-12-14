@@ -16,6 +16,12 @@ Scinear adopts this view by enforcing specific rules on field and method definit
 
 ## Field Definition Rules
 
+In a linear class, fields are either linear or nonlinear.
+
+***Linear field:*** A linear class's field is a linear field if its type is linear.
+
+In the following rules, Scinear handles linear fields and nonlinear fields differently.
+
 ### Internal and External Fields
 
 In Scala, a class field may reference other fields within the same class during initialization.
@@ -40,7 +46,7 @@ If Scinear permits accessing `r` outside the class body, such as in the `main` f
 once during the construction of `circle` and again in the `main` function.
 
 ***Scinear-fields-rule-1:***
-Every linear field of a linear class should be either an internal field or an external field.
+Every linear field of a linear class should be exclusively either an internal field or an external field.
 These categories are defined as follows:
 
 - **Internal fields** that other fields refer to in the class body (i.e., during the execution of the constructor).  
@@ -80,19 +86,18 @@ end LinearList
 
 When a class member method references a field in its body, every invocation of the method potentially reads the field.
 This access causes a problem if the field is linear.
-For example, in the following:
+For example, in the following, every call to `getSize` would result in reading the `next` field:
 ```Scala
 class LinearList(val next: LinearList) extends Linear:
   def getSize: Int = 1 + next.getSize // error `next` is not accessible here
 end LinearList
 ```
-Every call to `getSize` would result in reading the `next` field.
 
 ***Scinear-method-rule1:***
 A class member's methods defined within a linear class cannot refer to the class's linear field.
 
 This rule prevents the linear fields of a class from leaking into its methods. 
-Furthermore, this restriction ensures that linear classes behave similarly to a datatype.
+Furthermore, this restriction ensures that linear classes behave similarly to a algebraic datatype.
 
 ### Exempted Methods
 
@@ -139,7 +144,7 @@ Furthermore, a linear class's method body does not refer to the class instance d
 
 ### Type Hierarchy Separation
 
-***Scinear-inheritance-rule:*** A linear class can only extend linear types and `Object`.
+***Scinear-inheritance-rule:*** A linear class can only extend linear classes, linear traits, and `Object`.
 
 This rule separates the linear class hierarchy from other types, joining them at `Object`.
 

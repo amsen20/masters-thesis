@@ -10,10 +10,10 @@ For simplicity, this section only concerns programs that do not cast linear type
 ### Memory Overview
 
 In the absence of `@HideLinearity`, references to a linear type are not stored within a nonlinear type, other than `Option` and `Tuple`, due to the [nonlinear-type-field-rule](./using-linear-types.md#fields-in-other-types).
-Additionally, linear values are accessible only by other linear values or by linear references.
+Additionally, linear values are accessible only by other linear values or by linear variables.
 
 Reachable linear values form a tree rooted in the current execution scope.
-The children of this root consist of the linear references available in the scope, while the remaining nodes represent linear values stored within other linear values.
+The children of this root consist of the linear variables available in the scope, while the remaining nodes represent linear values stored within other linear values.
 Furthermore, linear values may refer to nonlinear values.
 The following figure illustrates this memory overview:
 
@@ -24,9 +24,9 @@ The following figure illustrates this memory overview:
 
 Operations related to linear values fall into one of the following categories:
 
-* Reading a field or calling a method: This interaction expires the linear references and designates the result of the method or field access as a new reference.  
-* Creating a linear reference: This process results in a new linear reference.
-Any linear reference used as an argument for the type constructor becomes a child of this new reference.
+* Reading a field or calling a method: This interaction expires the linear variables and designates the result of the method or field access as a new variable.  
+* Creating a linear variable: This process results in a new linear variable.
+Any linear variable used as an argument to the type constructor becomes a child of this new variable as a linear value.
 
 Based on the operations, the tree structure is consistently preserved.
 

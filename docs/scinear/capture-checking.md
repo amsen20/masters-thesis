@@ -16,7 +16,7 @@ Let AST node $u$ be an expression of type $T$.
 Assume $T$ has a type parameter $CS >: caps.CapSet$ that the argument instantiating it includes a linear capability $l$.
 $l$ should not be expired in node $u$ meaning no node $v$ that precedes $u$ in traversal order may refer to $l$.
 
-This rule disallows mentioning a linear reference, which is also a capability, in a capture set after the program has used it.
+This rule disallows mentioning a linear variable, which is also a capability, in a capture set after the program has used it.
 
 ```Scala
 class Tracker[LinearCaps^]:

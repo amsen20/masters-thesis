@@ -38,9 +38,9 @@ Moreover, the simplicity of `Option[T]` and `Tuple[T]` ensures that promoting th
 To address all the discussed issues safely, Scinear enforces a minimal promotion rule.
 
 ***Scinear-polymorphic-promotion-rule:***
-If a method parameter, class parameter, local variable, or a `this` reference `v` possesses type $T[T_1, ..., T_n]$ where $T$ is not a linear type and type parameter $T_i$ is instantiated with a linear type, one of the following cases applies:
+If a method parameter, class parameter, local variable, or a `this` reference $v$ possesses type $T[T_1, ..., T_n]$ where $T$ is not a linear type and type parameter $T_i$ is instantiated with a linear type, one of the following cases applies:
 
-1. If $T$ is `Option` or `Tuple`, Scinear promotes $T$ to a linear type and treats `v` as a linear reference.
+1. If $T$ is `Option` or `Tuple`, Scinear promotes $T$ to a linear type and treats $v$ as a linear variable.
 2. If $T_i$ has the `@HideLinearity` annotation, Scinear emits a warning.
 3. Otherwise, Scinear emits an error.
 
@@ -93,3 +93,23 @@ def checkIdentity(): Unit =
 	normalIdentity(LinearInt(42)) // error: cannot pass linear value as polymorphic parameter
 end checkIdentity
 ```
+
+## `@HideLinearity`
+
+Scinear provides a method to bypass linearity rules in both [polymorphic promotion](#polymorphic-promotion) and [polymorphic function calls](#polymorphic-function-calls) using the `@HideLinearity` annotation.
+With this annotation, the program can store linear instances in polymorphic nonlinear classes.
+```Scala
+TODO: AN EXAMPLE OF STORING LINEAR INSTANCES IN NONLINEAR CLASSES.
+```
+Also, the program can pass linear instances to polymorphic functions as polymorphic parameters.
+This would enable the function to use the parameter without linear restrictions.
+```Scala
+TODO: AN EXAMPLE OF PASSING A LINEAR INSTANCE TO A FUNCTION.
+```
+Similar to Rust's `unsafe` keyword, `@HideLinearity` allows libraries like imem to provide safe external interfaces while breaking safety rules internally.
+
+Strict adherence to linearity rules prevents holding multiple references to a single linear object, which is essential to `imem`'s use case.
+Therefore, a mechanism to disable linearity rules for specific program areas is inevitable.
+
+This annotation is intended for limited library use cases.
+As a result, Scinear emits a warning when the program uses this annotation.
