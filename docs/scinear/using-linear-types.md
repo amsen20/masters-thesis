@@ -143,7 +143,7 @@ def length(lst: LinearList): Int =
   len
 end length
 ```
-Every iteration of the loop, the program reads the `curr` reference.
+In every iteration of the loop, the program reads the `curr` reference.
 The correct way to implement the `length function` is using recursion, which is described in the next section.
 
 To address this issue, Scinear enforces a specific rule for loops.
