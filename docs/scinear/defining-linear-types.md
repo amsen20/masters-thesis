@@ -36,8 +36,8 @@ end Circle
 end main
 ```
 
-If Scinear permits accessing `r` outside the class body, such as in the `main` function, `circle.r` is read twice.
-Once during the construction of `circle` and again in the `main` function.
+If Scinear permits accessing `r` outside the class body, such as in the `main` function, `circle.r` is read twice,
+once during the construction of `circle` and again in the `main` function.
 
 ***Scinear-fields-rule-1:***
 Every linear field of a linear class should be either an internal field or an external field.
