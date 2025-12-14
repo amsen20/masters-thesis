@@ -120,7 +120,7 @@ These method exemptions maintain practicality within a standard Scala 3 codebase
 ### `this` in Linear Classes
 
 Accessing `this` implies reading the value of the instance referred to by the keyword.
-This referring would violate the [linearity rule](../background/linear-types.md#main-linearity-rule) if the instance is linear.
+This reference would violate the [linearity rule](../background/linear-types.md#main-linearity-rule) if the instance is linear.
 For example:
 ```Scala
 class LinearList(val data: Int, val next: LinearList) extends Linear:
