@@ -59,7 +59,7 @@ The [usage section](./using-linear-types.md) explains the order's effect.
 The program reads each field of a linear instance only once, so defining mutable fields in a linear class is unnecessary.
 
 ***Scinear-fields-rule-2:***
-All fields of a linear class should be strictly evaluated values (val), not variables (var) or lazy values (lazy val).
+All fields of a linear class should be strictly evaluated immutable values (val), not mutable variables (var) or lazy values (lazy val).
 Each field’s type can be either linear or nonlinear.
 
 This rule enforces immutability on linear types and simplifies the evaluation order.
