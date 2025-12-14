@@ -141,7 +141,7 @@ Furthermore, a linear class's method body does not refer to the class instance d
 
 ***Scinear-inheritance-rule:*** A linear class can only extend linear types and `Object`.
 
-This rule separates linear type hierarchy from other types, joining them at `Object`.
+This rule separates the linear class hierarchy from other types, joining them at `Object`.
 
 ### Class Definition Simplification
 
