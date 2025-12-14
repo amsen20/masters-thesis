@@ -17,7 +17,7 @@ But this rule is limited to class definitions.
 Scinear addresses linear instantiations through linear promotion.
 
 ***Linear promotion***:
-If Scinear promotes a nonlinear type, the plugin enforces all linearity rules on that instances of that type.
+If Scinear promotes a nonlinear type, the plugin enforces all linearity rules on instances of that type.
 Put another way, Scinear treats promoted types as linear types.
 
 One approach is to promote all linear instantiations of polymorphic types.
