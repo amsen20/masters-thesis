@@ -15,6 +15,11 @@ theme:
     - search.suggest
     - search.highlight
 
+# Plugins
+plugins:
+  - search
+  - print-site
+
 # Navigation (Table of Contents)
 nav:
   - Home: index.md
@@ -22,14 +27,17 @@ nav:
   - Background:
     - Overview: background/index.md
     - Scala native: background/scala-native.md
+    - Scala AST: background/scala-ast.md
     - Capturing types: background/capturing-types.md
     - Linear types: background/linear-types.md
     - Ownership: background/ownership.md
   - Scinear A linear type plugin for Scala:
     - Overview: scinear/index.md
-    - Definitions: scinear/definitions.md
+    - Defining linear types: scinear/defining-linear-types.md
+    - Using linear types: scinear/using-linear-types.md
     - Polymorphism: scinear/polymorphism.md
-    - Capture sets: scinear/capture-sets.md
+    - Capture checking: scinear/capture-checking.md
+    - Memory model: scinear/memory-model.md
     - Plugin implementation: scinear/plugin-implementation.md
   - Static memory management library `imem`:
     - Overview: imem/index.md
@@ -56,3 +64,10 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
+  - attr_list
+
+extra_javascript:
+  - javascript/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
