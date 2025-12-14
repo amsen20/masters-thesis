@@ -35,7 +35,7 @@ end Cons
 ```
 Moreover, the simplicity of `Option[T]` and `Tuple[T]` ensures that promoting these types is safe.
 
-To address all the discussed issues safely Scinear enforces a minimal promotion rule.
+To address all the discussed issues safely, Scinear enforces a minimal promotion rule.
 
 ***Scinear-polymorphic-promotion-rule:***
 If a method parameter, class parameter, local variable, or a `this` reference `v` possesses type $T[T_1, ..., T_n]$ where $T$ is not a linear type and type parameter $T_i$ is instantiated with a linear type, one of the following cases applies:
