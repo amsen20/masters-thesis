@@ -72,7 +72,7 @@ This rule enforces immutability on linear types and simplifies the evaluation or
 
 ```Scala
 class LinearList(val next: LinearList) extends Linear:
-  // var size: Int = 1 + next.size <-- error variable field
+  // var size: Int = 1 + next.size <-- error mutable field
 
   // lazy val size: Int = 1 + next.size <-- error lazy val field
 
