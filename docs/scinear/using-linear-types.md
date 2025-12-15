@@ -12,7 +12,7 @@ When an expression mentions a linear variable, the expression is using the varia
 The following rules limit the usage of linear variables in a program.
 
 ***Scinear-usage-at-most-rule:*** 
-For each linear variable $l$ and any node $u$ that uses $l$, no node $v$ preceding $u$ in the [AST traversal order](/docs/background/scala-ast.md#traversing-ast) may use $l$.
+For each linear variable $l$ and any node $u$ that uses $l$, no node $v$ preceding $u$ in the [AST traversal order](../background/scala-ast.md#traversing-ast) may use $l$.
 
 To put it another way, after a linear variable is used, it expires.
 Keep in mind that the AST traversal order is a partial order.
@@ -195,7 +195,7 @@ end length
 
 ## Fields in other types
 
-Following the [original linearity paper]((https://www.researchgate.net/profile/Philip-Wadler/publication/2429119_Linear_Types_Can_Change_the_World/links/6410b420315dfb4cce7cf9bc/Linear-Types-Can-Change-the-World.pdf)), Scinear does not allow classes that are not linear to have linear fields.
+Following the [original linearity paper](https://www.researchgate.net/profile/Philip-Wadler/publication/2429119_Linear_Types_Can_Change_the_World/links/6410b420315dfb4cce7cf9bc/Linear-Types-Can-Change-the-World.pdf), Scinear does not allow classes that are not linear to have linear fields.
 
 <a name="scinear-usage-nonlinear-type-field-rule"></a>
 ***Scinear-usage-nonlinear-type-field-rule:*** Nonlinear classes should not have linear fields.
