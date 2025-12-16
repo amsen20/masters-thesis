@@ -294,4 +294,4 @@ Another difference in the memory layout, when static rules are followed, is that
 These linear values are called `ValueHolder`s.
 As the diagram illustrates, each connected component has exactly one box or reference directly available through a variable.
 When the program unlocks a `ValueHolder`, imem invalidates the previous access point by making the old variable unavailable and then stores the new access point, which may be a box or a reference, in a fresh variable.
-The borrow checking section explains this mechanism in more detail.
+The [borrow checking](./borrow-checking.md) section explains this mechanism in more detail.
