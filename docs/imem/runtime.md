@@ -292,6 +292,6 @@ When the program follows imem static rules, the resulting object graph has the s
 
 Another difference in the memory layout, when static rules are followed, is that some boxes and references are stored inside linear values rather than directly in variables within the execution scope.
 These linear values are called `ValueHolder`s.
-As the diagram illustrates, each connected component has exactly one box or reference directly available through a variable.
+As the diagram illustrates, each connected component has exactly one box, one mutable reference, or multiple immutable references directly accessible through variables in the current scope.
 When the program unlocks a `ValueHolder`, imem invalidates the previous access point by making the old variable unavailable and then stores the new access point, which may be a box or a reference, in a fresh variable.
 The [borrow checking](./borrow-checking.md) section explains this mechanism in more detail.
