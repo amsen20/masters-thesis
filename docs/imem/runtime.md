@@ -276,7 +276,7 @@ The borrow checking section explains why `refMutInner` and `refImmutOuter`, whic
 Imem objects follow the same tree structure as linear objects.
 The following is a demonstration of imem’s memory overview, if the program does not violate imem dynamic verification:
 
-TODO: A DIAGRAM WITH REFERENCES THAT CAN HAVE IMMUT REACHING A MUT
+![Imem Memory Overview with No Static Rules](../img/imem-memory-overview-no-static.png){: width="600"}
 
 This illustration shows only reachable boxes and references whose tags remain in their corresponding internal borrow stacks.
 In other words, the diagram represents the state of live references and boxes at a specific point during the program’s execution.
@@ -288,4 +288,10 @@ This restriction applies when one box can access another box by dereferencing th
 The [borrow checking](./borrow-checking.md) and [ownership](./ownership.md) sections describe this rule and its implications in more detail.
 When the program follows imem static rules, the resulting object graph has the structure as follows:
 
-TODO: A DIAGRAM OF OBJECT GRAPHS THAT FOLLOW THE IMEM STATIC RULES
+![Imem Memory Overview with Static Rules](../img/imem-memory-overview.png){: width="450"}
+
+Another difference in the memory layout, when static rules are followed, is that some boxes and references are stored inside linear values rather than directly in variables within the execution scope.
+These linear values are called `ValueHolder`s.
+As the diagram illustrates, each connected component has exactly one box or reference directly available through a variable.
+When the program unlocks a `ValueHolder`, imem invalidates the previous access point by making the old variable unavailable and then stores the new access point, which may be a box or a reference, in a fresh variable.
+The borrow checking section explains this mechanism in more detail.
