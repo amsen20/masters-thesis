@@ -44,9 +44,9 @@ nav:
     - Plugin implementation: scinear/plugin-implementation.md
   - Static memory management library `imem`:
     - Overview: imem/index.md
-    - Runtime model: imem/runtime-model.md
-    - Ownership by linearity: imem/ownership-by-linearity.md
-    - Borrow checking by capture tracking: imem/borrow-checking-by-capture-tracking.md
+    - Runtime: imem/runtime.md
+    - Ownership: imem/ownership.md
+    - Borrow checking: imem/borrow-checking.md
     - Discussion on soundness: imem/soundness.md
   - Evaluation:
     - Overview: evaluation/index.md
