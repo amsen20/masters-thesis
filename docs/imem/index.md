@@ -12,4 +12,4 @@ However, imem is a library rather than a compiler component.
 imem's static enforcement is not entirely sound and contains loopholes; the [soundness section](soundness.md) discusses these loopholes and suggests minimal guidelines to avoid them.
 
 Additionally, imem does not manage the actual allocation and deallocation of memory.
-[Future works section](../conclusion/future-works.md) sketches how imem can be connected to actual memory management in Scala Native.
+The [future works section](../conclusion/future-works.md) sketches how imem can be connected to actual memory management in Scala Native.
