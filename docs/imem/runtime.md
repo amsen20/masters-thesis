@@ -94,7 +94,7 @@ end InternalRef
 ```
 
 `InternalRef` tracks accesses by assigning a distinct tag to each access.
-A tag is either unique (`Unq`), which permits both read and write access, or shared (`Shr`), which allows read-only access.
+A tag is of one of two kinds: it is either unique (`Unq`), which permits both read and write access, or shared (`Shr`), which allows read-only access.
 Also, every tag has a unique timestamp, where higher values indicate more recent tags.
 
 Each internal reference maintains a stack of all live tags in `stack.borrows`.
