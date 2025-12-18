@@ -152,4 +152,4 @@ This rule separates the linear class hierarchy from other types, joining them at
 
 ***Scinear-Nesting-rule:*** Linear class definitions cannot include nested class definitions.
 
-This rule reduces complexity of defining linear classes without sacrificing much practicality.
+This rule reduces the complexity of defining linear classes without sacrificing much practicality.
