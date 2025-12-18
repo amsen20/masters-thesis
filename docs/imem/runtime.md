@@ -98,7 +98,7 @@ A tag is of one of two kinds: it is either unique (`Unq`), which permits both re
 Also, every tag has a unique timestamp, where higher values indicate more recent tags.
 
 Each internal reference maintains a stack of all live tags in `stack.borrows`.
-The `newUnique` and `newShared` methods create new tags by deriving one from existing ones.
+The `newUnique` and `newShared` methods create a new tag by deriving one from an existing tag.
 These methods check whether the tag holder has permission to request a new tag based on the `NEW-MUTABLE-REF` and `NEW-SHARED-REF-1` rules, respectively, given the current stack state.
 If the check succeeds, the methods return the new tag; otherwise, they throw an `IllegalStateException`.
 
