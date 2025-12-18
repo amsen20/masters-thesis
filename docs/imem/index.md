@@ -9,7 +9,7 @@ This runtime verification is optional, so it can be disabled to prioritize perfo
 During compilation, imem utilizes Scala type system features, including [capture checking](../background/capturing-types.md), [dependent types](../background/dependent-types.md), and linear types provided by the [scinear plugin](../scinear/index.md), to implement ownership and borrow checking.
 This approach is similar to Rust's ownership system and borrow checker.
 However, imem is a library rather than a compiler component.
-imem's static enforcement is not entirely sound and contains loopholes; [soundness section](soundness.md) discusses these loopholes and suggests minimal guidelines to avoid them.
+imem's static enforcement is not entirely sound and contains loopholes; the [soundness section](soundness.md) discusses these loopholes and suggests minimal guidelines to avoid them.
 
 Additionally, imem does not manage the actual allocation and deallocation of memory.
 [Future works section](../conclusion/future-works.md) sketches how imem can be connected to actual memory management in Scala Native.
