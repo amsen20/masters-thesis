@@ -10,8 +10,8 @@ Static mechanisms, such as ownership and borrow checking, and their implementati
 
 ### Resource
 
-A resource is an instance of any type for which imem manages access.
-The resource type may be a built-in type, a custom type, or a non-private imem type, such as `Box`, `ImmutRef`, or `MutRef`.
+A resource is an instance of any class for which imem manages access.
+The resource class can be a built-in class, a user-defined class, or a non-private imem class, such as `Box`, `ImmutRef`, or `MutRef`.
 
 ### Unsafe Reference
 
