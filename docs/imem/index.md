@@ -1,4 +1,4 @@
-# Static memory management library `imem`
+# Memory management library `imem`
 
 imem is a memory management library that ensures resources adhere to a minimal version of the [Stacked Borrows Model](../background/stacked-borrows.md).
 It achieves this goal through two distinct and independent mechanisms: static enforcement and dynamic verification.
