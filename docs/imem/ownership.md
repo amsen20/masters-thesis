@@ -41,6 +41,9 @@ In the imem context, this means:
 - If the variable has a linear type, it has not expired.
 - If the variable type includes type parameters instantiated with capture-sets, any linear capability in the capture sets has not expired.
 
+***Resource***:  
+A resource is a value \(v\) that is reachable from available variables and satisfies the condition \(|direct(v)| \geq 1\).
+
 ***Aliveness:***
 At each point during program execution, a box \(b: \text{Box}[T, \ldots]\) is alive if its type does not include any type parameter instantiated with a capture set that contains an expired linear capability.
 
@@ -302,16 +305,35 @@ Here is an example of moving the inner box of a nested box `Box[Box[Int, {lf1}],
 TODO: AN EXAMPLE OF MOVING `Box[Box[Int, {lf1}]{lf1}]` to `lf2`
 ```
 
-### Uniqueness of Direct Box
+### Uniqueness of Direct Box During Moving
 
-The *One direct box* goal aims for having exactly one direct reachable box for each resource reachable from available variables.
+The following lemma states that moving in imem preserves the *One direct box* property.
 
-<!-- TODO: -->
+***direct-box-lemma:***  
+Assume that every resource has exactly one direct box.
+After a `moveBox` or `derefForMoving` operation, every resource still has exactly one direct box.
 
-To show that moving preserves this, the proof assumes that every reachable resource has a singe direct reachable box and shows that, after a `moveBox` or `derefForMoving` operation, every resource still has a direct box.
+**Proof.** The proof consists of two parts, depending on the operation.
 
-**`moveBox` operation:**
-<!-- TODO: -->
+**`moveBox`:**  
+Assume that the program applies `moveBox` to a box \(b : \text{Box}[T, Owner]\).
+Since `Box` is a linear type, the program cannot reach \(b\) after \(b\) is passed to `moveBox`.
+The operation returns a box \(b' : \text{Box}[T, Owner']\), which is a direct box for the resource of \(b\).
+Before the operation, \(b\) is the only reachable direct box for that resource.
+After the operation, \(b\) is unreachable and \(b'\) is reachable.
+Therefore, the resource has exactly one reachable direct box after the operation.
+
+**`derefForMoving`:**  
+Assume that the program applies `derefForMoving` to a box \(b : \text{Box}[T, Owner]\).
+Since `Box` is a linear type, the program cannot reach \(b\) after it is passed to `derefForMoving`, and the program also cannot reach \(b\) during the `moveAction` continuation.
+
+During `moveAction`, the value \(t = deref(b)\) is passed to the continuation as a [escape-checked](../background/capturing-types.md#escape-checking) argument.
+The value \(t\) is not a resource because \(direct(t) = 0\).
+Moreover, the only box that provides access to \(t\) is \(b\), and \(b\) is inaccessible inside `moveAction`.
+Also, because the `newBox` function requires a resource argument with an empty capture set, the program, inside `moveAction`, cannot create a new box that turns \(t\) into a resource again.
+
+After `moveAction`, since \(t\) was an escape-checked argument in `moveAction`; the program can only access \(t\) after `moveAction` if `moveAction` returns \(t\).
+In that case, \(t\) is still not a resource, and the statement of the lemma continues to hold.
 
 ## Resource Ownership
 
