@@ -168,7 +168,6 @@ If a linear value \(l\) reaches a box \(b'\), then at least one field value \(f:
 
 The proof uses induction on the number of reachability operations needed to obtain \(b'\) from \(v\).
 Let \(n \ge 0\) be such that there exists a sequence \(Op_1, \ldots, Op_n\) with \(Op_1 \circ \cdots \circ Op_n (v) = b'\).
-Define the induction statement \(P(n)\) as follows:
 
 **Induction statement for \(n\) operations:**
 If \(v: V\) reaches \(b': \text{Box}[T', Owner']\) using \(n\) operations and \(lf \in Owner'\), then \(lf\) occurs in at least one capture-set instantiation of a type parameter of \(V\).
