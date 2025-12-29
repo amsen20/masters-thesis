@@ -79,7 +79,7 @@ $$
 P(l) = \{ x \in \text{dom}(\rho_L) \mid \rho_L(x) = l \} \cup \{ k \in \text{dom}(\sigma_L) \mid l \in \text{Refs}(\sigma_L(k)) \}
 $$
 
-Where $\text{Refs}(v)$ is the number of references linear value $v = \langle v_1, \dots, v_k \rangle$ mentions:
+Where $\text{Refs}(v)$ is the set of references linear value $v = \langle v_1, \dots, v_k \rangle$ mentions:
 
 $$
 \text{Refs}(v) = \{ v_i \vert v_i \in \text{Loc}_{L} \}
@@ -279,4 +279,86 @@ $$
 l \in \text{Res} \iff \exists \tau \subseteq \mathcal{L} \text{ s.t. } \text{box}(l, \tau) \in \text{Val}_L
 $$
 
+The provided is the definition and well-formedness definition for the linear memory.
+
 ### Well-formedness
+
+#### Additional Definitions
+
+***Dereferencing:***
+The function $\text{loc}(v)$ returns the location pointed to by a reference value.
+Meaning for any value $v \in \{ \text{box}(l, \tau), \text{mref}(l, \tau), \text{iref}(l, \tau), \text{hold}(l, \alpha) \}$:
+
+$$
+\text{loc}(v) = l
+$$
+
+***Reachability:***
+A value $v'$ is reachable from value $v$, denoted $v \rightsquigarrow v'$, if there exists a sequence of the following operations that leads from $v$ to $v'$:
+- TODO: Simply define each operation (dereferencing a box or accessing a field of a linear value)
+
+***Available Linear Environment:***
+The set of available linear variables, $\text{Var}_{Avail}$, consists of all variables in $\rho_L$ that the first reference that they reach is an available reference.
+
+***Direct Boxes:***
+The set of direct boxes of a location $l$ is called $D(l)$, which consists of all boxes in the memory that point to $l$.
+
+$$
+D(l) = \{ b \in \text{Val}_L \mid \exists \tau, b = \text{box}(l, \tau) \}
+$$
+
+***Paths:***
+A path $\pi$ is a sequence of values starting from a variable in the environment $\rho$ and ending at a specific value using the reachability operations.
+
+#### Properties
+
+A memory state $(\rho, \sigma, \Lambda)$ is well-formed if it satisfies the following.
+
+***Direct Box Uniqueness:***
+Every resource reachable from an available variable must have exactly one reachable direct box reference pointing to it.
+Let $\text{B}_{Avail}$ be the set of all boxes reachable from $\text{Var}_{Avail}$.
+
+$$
+\forall l \in \text{Res}, \quad | D(l) \cap \text{B}_{Avail} | = 1
+$$
+
+***No cyclic box***:
+A box's resource must not reach itself through dereferencing:
+
+$$
+\forall b \in \text{B}_{Avail}, \quad \neg (\sigma(\text{loc}(b)) \rightsquigarrow b)
+$$
+
+***No dangling boxes:***
+If a box $b_1 = \text{box}(l_1, \tau_1)$ reaches another box $b_2 = \text{box}(l_2, \tau_2)$, then if $b_2$ becomes unavailable, $b1$ gets unavailable too.
+
+$$
+b_1 \rightsquigarrow b_2 \implies \tau_2 \subseteq \tau_1
+$$
+
+This ensures that all boxes reachable from the available linear variables are available.
+
+***Borrowing Validity:***
+If a mutable or immutable reference exists for a location, there must be a corresponding box for that location with an assigned lifetime set that is a subset of the reference's.
+For any reference $r \in \{ \text{mref}(l, \tau_r), \text{iref}(l, \tau_r) \}$, there exists a box $b = \text{box}(l, \tau_b)$ such that $\tau_b \subset \tau_r$.
+
+This ensures that a box, always outlives the references that are borrowed from it.
+
+***Box reaching Reference:***
+If a box $b$ reaches a mutable or immutable reference $r$, then every path from the environment to $b$ must contain a value holder $\text{hold}(l, \alpha)$ such that $\alpha \in \tau_r$.
+
+***Mutable Reference reaching Immutable Reference:***
+If a mutable reference $m$ reaches an immutable reference $ir$, then every path from the environment to $m$ must contain a value holder $\text{hold}(l, \alpha)$ such that $\alpha \in \tau_{ir}$.
+
+***Mutable Reference reaching mutable Reference:***
+If a mutable reference $m_1$ reaches another mutable reference $m_2$:
+
+- If $\text{loc}(m_1) \neq \text{loc}(m_2)$.
+  Every path from the environment to $m_1$ must contain a value holder $\text{hold}(l, \alpha)$ such that $\alpha \in \tau_{m2}$.
+- If $\text{loc}(m_1) = \text{loc}(m_2)$.
+  Either every path from the environment to $m_1$ contains a holder for $m_2$ (as above), or the path to $m_2$ contains a holder for $m_1$.
+
+***Immutable Reference not reaching Mutable Reference:***
+No available immutable reference should reach available mutable reference.
+
+<!-- TODO: CHECKOUT THE EDITED VERSION -->
