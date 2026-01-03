@@ -403,4 +403,25 @@ This property results in immutable references reaching a constant portion of mem
 
 ### Overview
 
+In a well-formed imem memory, the structure formed by connecting all available boxes to the values stored at the locations they point to is a tree.
+This structure arises because the *Direct Box Uniqueness* property guarantees that each value is pointed to by exactly one box, and the *No Cyclic Box* property prevents boxes from forming cycles.
+As a result, this structure closely resembles the tree of linear values in a well-formed linear memory.
+
+imem allows programs to borrow immutable and mutable references from boxes.
+When edges from immutable and mutable references to the values at their target locations are added, the tree becomes a directed acyclic graph.
+This graph remains acyclic because references do not introduce cycles.
+Moreover, due to the *No Dangling References* property, following any available reference whose lifetime has not expired never leads to an unavailable reference.
+In addition, every available immutable or mutable reference is ultimately borrowed from an available box, which is ensured by the *Borrowing Validity* property.
+
+The reaching properties further restrict how references can appear in this graph.
+If a variable points to an available box, then there are no available immutable or mutable references pointing to any location within the subtree of that box.
+If a variable points to an available mutable reference, then accessing the boxes that reach this reference, as well as the mutable references it is borrowed from, necessarily goes through a value holder that expires the mutable reference.
+As a result, there are no mutable or immutable references pointing to any location within the subtree of the box from which the mutable reference is borrowed.
+
+Finally, due to the Immutable Reference Not Reaching Mutable Reference property, if a variable points to an available immutable reference, then no mutable reference points to a location whose value lies in the subtree of the corresponding box.
+Accessing any mutable reference or box that reaches the location targeted by this immutable reference causes the immutable reference to expire.
+
+The following diagram illustrates the available and reachable part of a well-formed imem memory:
+
+TODO: ADD A DIAGRAM FOR IMEM MEMORY
 
