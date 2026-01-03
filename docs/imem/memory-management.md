@@ -1,28 +1,3 @@
-- [x] Define the memory definition and the env, references and linear and nonlinear values
-- [x] Then proceed to define well formed-ness
-- [x] Then define a minimal two element list as an example:
-
-  - [x] First show how hard it is to iterate it, map it.
-  - [x] Second show how it is impossible to have a immutable view to the second element.
-
-- [x] Mention that in a well formed linear memory, cascade deleting a variable is safe.
-- [x] Then mention that `@HideLinearity` allows non well form memories to form in runtime.
-- [x] Then start defining the imem memory overview:
-- [x] Define boxes, value holders, immutable reference and mutable references.
-- [ ] Define what a well-formed memory overview in this definition looks like.
-- [ ] Then again, define a minimal two element list as an example.
-
-  - [ ] Easy to iterate.
-  - [ ] Easy to have reference to the second element.
-
-- [ ] It's safe to delete after lifetime is passed (in lifetime order).
-
-- [ ] Prove that a program that always has a well formed memory, never violates the stacked borrows model
-
----
-
-<!-- TODO: Check all the definitions -->
-
 # Memory Management in imem
 
 This section defines the meaning of memory management in imem, the safety guarantees that imem statically ensures, and the reasons why imem is more expressive than pure linear data structures.
@@ -91,10 +66,10 @@ $$
 \text{WF}(\rho_L, \sigma_L) \implies \forall l \in \text{dom}(\sigma_L), |P(l)| = 1
 $$
 
-$par$ is the function that maps linear locations to their parent, meaning:
+$Par$ is the function that maps linear locations to their parent, meaning:
 
 $$
-\text{par}(l) \in P(l)
+\text{Par}(l) \in P(l)
 $$
 
 ***Reachability of Every Linear Value:***
@@ -104,7 +79,7 @@ In other words, for every linear location \(l\), the following condition must ho
 
 $$
 \text{WF}(\rho_L, \sigma_L) \implies
-\forall l \in \text{dom}(\sigma_L), \exists n \ge 0 \text{ s.t. } par^{n}(l) \in \text{range}(\rho_L)
+\forall l \in \text{dom}(\sigma_L), \exists n \ge 0 \text{ s.t. } Par^{n}(l) \in \text{range}(\rho_L)
 $$
 
 TODO: A DIAGRAM OF HOW LINEAR MEMORY LOOKS LIKE
@@ -200,28 +175,9 @@ imem uses `@HideLinearity` to provide a more expressive approach while still per
 imem extends linear memory with new kinds of references that make working with a well-formed memory more expressive than using pure linear values that follow linearity rules.
 To ensure the safety of well-formed memories and to enable static memory management, imem introduces lifetimes.
 
-### imem Memory Definition
+### Definition by Extending Linear Memory
 
-imem's new reference kinds are a box, immutable reference, mutable reference and a value holder.
-They all hold a linear or nonlinear location.
-
-To make sense of these new references, a box is a general reference that a immutable or mutable reference can be borrowed from it.
-An immutable reference, provides the program with a read access to the location its referring to.
-A mutable reference is similar to an immutable reference, only it provides read-write access.
-A value holder reference, makes sure that when the program accesses the location its referring to, some other references does not exists.
-
-Boxes, immutable reference, and mutable reference have a set of lifetimes assigned to them.
-Each lifetime will expire sometime during the program execution.
-And with the lifetime, all the references mentioning this lifetime in its set will expire too.
-The following will give more explanation on what expiration actually means.
-
-A value holder has a lifetime assigned to it, meaning that the program cannot access to the location it is holding unless the lifetime is expired.
-
-At each point of the execution, lifetimes are divided into expired and available lifetimes.
-
-boxes, mutable references, and value holders are linear values, and immutable references are nonlinear.
-
-
+imem introduces lifetimes to track the availability of a location, expressed as the associated lifetime availability.
 A lifetime is an entity that becomes available at some point during execution and expires later.  
 The set of all lifetimes is \(\mathcal{L}\).
 
@@ -263,42 +219,87 @@ $$
 
 An immutable reference \(\text{iref}(l, \tau)\) is similar to a mutable reference but provides read-only access to the location and is a nonlinear value.
 
+### Well-formedness
+
+#### Additional Definitions
+
+***Availability of References:***
 imem associates a set of lifetimes \(\tau \subseteq \mathcal{L}\) with the references \(\text{box}(l, \tau)\), \(\text{mref}(l, \tau)\), and \(\text{iref}(l, \tau)\).  
 If any lifetime in \(\tau\) expires, the reference becomes unavailable.
 Formally, a value \(v \in \{ \text{box}(l, \tau), \text{mref}(l, \tau), \text{iref}(l, \tau) \}\) is available iff:
 
 $$
-\text{Available}(v, \Lambda) \iff \tau \subseteq \Lambda
+\text{Avail}(v, \Lambda) \iff \tau \subseteq \Lambda
 $$
 
-Availability of a reference is used later in the definition of well-formedness.
+***References Mentioned in a Value:***
+The references that appear in a value \(v\), denoted \(\text{Refs}(v)\), are defined as follows:
 
+$$
+\text{Refs}(v) =
+\begin{cases}
+\{\, v_i \mid v = \langle v_1, \dots, v_k \rangle
+\;\wedge\; v_i \in \text{Loc}_L \cup \text{Loc}_{NL} \,\}
+& \\[4pt]
+\{l\}
+& \text{if } v \in \{\text{box}(l,\tau),\ \text{ref}(l,\tau),\ \text{mref}(l,\tau),\ \text{hold}(l,\alpha)\} \\[4pt]
+\emptyset
+& \text{otherwise.}
+\end{cases}
+$$
+
+***Resource:***
 A resource is a location that has an imem \(\text{box}\) reference pointing to it.
 
 $$
-l \in \text{Res} \iff \exists \tau \subseteq \mathcal{L} \text{ s.t. } \text{box}(l, \tau) \in \text{Val}_L
-$$
-
-The provided is the definition and well-formedness definition for the linear memory.
-
-### Well-formedness
-
-#### Additional Definitions
-
-***Dereferencing:***
-The function $\text{loc}(v)$ returns the location pointed to by a reference value.
-Meaning for any value $v \in \{ \text{box}(l, \tau), \text{mref}(l, \tau), \text{iref}(l, \tau), \text{hold}(l, \alpha) \}$:
-
-$$
-\text{loc}(v) = l
+l \in \text{Res}(\sigma) \iff \exists \tau \subseteq \mathcal{L} \text{ s.t. } \text{box}(l, \tau) \in \text{Val}_L
 $$
 
 ***Reachability:***
-A value $v'$ is reachable from value $v$, denoted $v \rightsquigarrow v'$, if there exists a sequence of the following operations that leads from $v$ to $v'$:
-- TODO: Simply define each operation (dereferencing a box or accessing a field of a linear value)
+A location \(l\) reaches another location \(l'\) in one step if and only if:
+
+$$
+l \to l' \iff l \in \mathrm{dom}(\sigma) \ \wedge\ l' \in \text{Refs}(\sigma(l))
+$$
+
+A location \(l\) reaches a location \(l'\) if and only if:
+
+$$
+l \to^{*} l' \;\;\iff\;\; \exists n \ge 1,\ \exists l_1, \dots, l_n \;\text{such that}\;
+l_0 = l \;\wedge\; l_n = l' \;\wedge\; \forall i \in \{1,\dots,n-1\},\; l_i \to l_{i+1}.
+$$
+
+A location \(l\) is reachable from a linear variable \(x \in \mathrm{dom}(\rho_L)\) iff:
+
+\(x \rightsquigarrow l \iff \rho_L(x) \to^{*} l\)
+
+A reaching path \(\pi \in  \text{Paths}(x,l)\) from variable \(x\) to location \(l\) is a finite sequence of locations \((l_1, \dots, l_n)\) such that:
+
+- \(l_1 = \rho_L(x)\),
+- \(l_n = l\),
+- and \(l_i \to l_{i+1}\) for all \(1 \le i < n\).
 
 ***Available Linear Environment:***
-The set of available linear variables, $\text{Var}_{Avail}$, consists of all variables in $\rho_L$ that the first reference that they reach is an available reference.
+The set of available linear variables, $\text{Var}_{Avail}$, consists of all linear variables in $\rho_L$ for which all references they reach are available:
+
+$$
+\text{Var}_{\mathit{Avail}}(\rho,\sigma,\Lambda) =
+\{\, x \in \mathrm{dom}(\rho_L) \mid
+\forall r \in \text{RefsReach}(x,\rho,\sigma).\ \text{Avail}(r,\Lambda) \,\}
+$$
+
+Where $\text{RefsReach}$ is defined as follows:
+
+$$
+\text{RefsReach}(x,\rho,\sigma) = \{\, r \mid \exists k.\ x \rightsquigarrow k\ \wedge\ \sigma(k)=r\ \wedge\ r \in \{\text{box}(\_,\_),\text{ref}(\_,\_),\text{mref}(\_,\_)\} \,\}
+$$
+
+***Available reachable boxes:***
+The set of available reachable boxes, $\text{Box}_{AR}$, is:
+
+$$
+\text{Box}_{AR}(\rho,\sigma,\Lambda) = \{\, b \in \text{Boxes}(\sigma) \mid \exists x \in \text{Var}_{\mathit{Avail}}(\rho,\sigma,\Lambda).\ \exists k.\ x \rightsquigarrow k \wedge \sigma(k)=b \,\}
+$$
 
 ***Direct Boxes:***
 The set of direct boxes of a location $l$ is called $D(l)$, which consists of all boxes in the memory that point to $l$.
@@ -307,58 +308,99 @@ $$
 D(l) = \{ b \in \text{Val}_L \mid \exists \tau, b = \text{box}(l, \tau) \}
 $$
 
-***Paths:***
-A path $\pi$ is a sequence of values starting from a variable in the environment $\rho$ and ending at a specific value using the reachability operations.
+***Access Expiration:***
+Accessing a reference \(r \in \{\text{box}(l,\_), \text{iref}(l,\_), \text{mref}(l,\_)\}\) expires a lifetime set \(\tau\) if either \(\tau\) is already expired, or every path that starts from an available linear variable and reaches \(r\) passes through a value holder \(\text{hold}(\_, \alpha)\) such that \(\alpha \in \tau\).  
+Formally:
+
+$$
+\begin{aligned}
+  \text{AExp}_{(\rho,\sigma,\Lambda)}(r,\tau) \iff\ &
+  \tau \cap \Lambda \neq \emptyset \vee
+  \forall x \in \text{Var}_{\mathit{Avail}}(\rho,\sigma,\Lambda).\ 
+  \forall k \in \text{dom}(\sigma).\ 
+  \Bigl(\sigma(k)=r \wedge x \rightsquigarrow k \Rightarrow \\
+    &\qquad \forall \pi \in \text{Paths}(x,k).\ 
+    \exists \alpha \in \tau.\ 
+    \exists i.\ \sigma(\pi_i)=\text{hold}(\_,\alpha)
+  \Bigr)
+\end{aligned}
+$$
 
 #### Properties
 
-A memory state $(\rho, \sigma, \Lambda)$ is well-formed if it satisfies the following.
+An imem memory state $(\rho, \sigma, \Lambda)$ is well-formed if it satisfies the following properties.
 
 ***Direct Box Uniqueness:***
-Every resource reachable from an available variable must have exactly one reachable direct box reference pointing to it.
-Let $\text{B}_{Avail}$ be the set of all boxes reachable from $\text{Var}_{Avail}$.
+Every linear location \(l \in \text{Loc}_{L}\) for which there exists an available linear variable $x \in \text{Var}_{\mathit{Avail}}$ that \(x \rightsquigarrow l\) has exactly one reachable direct box.
+Formally:
 
 $$
-\forall l \in \text{Res}, \quad | D(l) \cap \text{B}_{Avail} | = 1
+|D(l,\sigma) \cap \text{Box}_{AR}(\rho,\sigma,\Lambda)| = 1
 $$
 
 ***No cyclic box***:
-A box's resource must not reach itself through dereferencing:
+A box $b = \text{box}(l, \tau)$ must not reach itself through dereferencing:
 
 $$
-\forall b \in \text{B}_{Avail}, \quad \neg (\sigma(\text{loc}(b)) \rightsquigarrow b)
+\neg \exists k \in \mathrm{dom}(\sigma).\ \sigma(k)=b \ \wedge\ l \to^{*} k
 $$
 
-***No dangling boxes:***
-If a box $b_1 = \text{box}(l_1, \tau_1)$ reaches another box $b_2 = \text{box}(l_2, \tau_2)$, then if $b_2$ becomes unavailable, $b1$ gets unavailable too.
+***No dangling references:***
+For any two references \(r_1 \in \{\text{box}(l_1, \tau_1), \text{iref}(l_1, \tau_1), \text{mref}(l_1, \tau_1)\}\) and  \(r_2 \in \{\text{box}(l_2, \tau_2), \text{iref}(l_2, \tau_2), \text{mref}(l_2, \tau_2)\}\), and for any location \(k\) such that \(\sigma(k) = r_2\), if \(l_1\) reaches \(k\) and \(r_2\) becomes unavailable, then \(r_1\) also becomes unavailable.
 
 $$
-b_1 \rightsquigarrow b_2 \implies \tau_2 \subseteq \tau_1
+l_1 \to^{*} k \implies \tau_2 \subseteq \tau_1
 $$
 
-This ensures that all boxes reachable from the available linear variables are available.
+This property ensures that all references reachable from available references are available.
 
 ***Borrowing Validity:***
-If a mutable or immutable reference exists for a location, there must be a corresponding box for that location with an assigned lifetime set that is a subset of the reference's.
-For any reference $r \in \{ \text{mref}(l, \tau_r), \text{iref}(l, \tau_r) \}$, there exists a box $b = \text{box}(l, \tau_b)$ such that $\tau_b \subset \tau_r$.
+For every reference \(r \in \{\text{mref}(l,\tau_r), \text{iref}(l,\tau_r)\}\), there exists a box \(b=\text{box}(l,\tau_b)\) that $\tau_b \subseteq \tau_r$.
 
-This ensures that a box, always outlives the references that are borrowed from it.
+This property means that every immutable and mutable reference is borrowed from a box, and that box always outlives the reference.
 
 ***Box reaching Reference:***
-If a box $b$ reaches a mutable or immutable reference $r$, then every path from the environment to $b$ must contain a value holder $\text{hold}(l, \alpha)$ such that $\alpha \in \tau_r$.
+If a box $b = \text{box}(l_b, \tau_b)$ reaches a location that a mutable or immutable reference $r \in \{\text{iref}(l_r, \tau_r), \text{mref}(l_r, \tau_r)\}$ points to it, then accessing $b$ should expire $r$:
+
+$$
+l_b \to^{*} l_r \implies \text{AExp}_{(\rho,\sigma,\Lambda)}(b,\tau_r)
+$$
 
 ***Mutable Reference reaching Immutable Reference:***
-If a mutable reference $m$ reaches an immutable reference $ir$, then every path from the environment to $m$ must contain a value holder $\text{hold}(l, \alpha)$ such that $\alpha \in \tau_{ir}$.
+If a mutable reference $mr = \text{mref}(l_m, \tau_m)$ reaches a location that an immutable reference $ir = \text{iref}(l_i, \tau_i)$ points to it, then accessing $mr$ should expire $ir$:
 
-***Mutable Reference reaching mutable Reference:***
-If a mutable reference $m_1$ reaches another mutable reference $m_2$:
+$$
+l_m \to^{*} l_i \implies \text{AExp}_{(\rho,\sigma,\Lambda)}(mr,\tau_i)
+$$
 
-- If $\text{loc}(m_1) \neq \text{loc}(m_2)$.
-  Every path from the environment to $m_1$ must contain a value holder $\text{hold}(l, \alpha)$ such that $\alpha \in \tau_{m2}$.
-- If $\text{loc}(m_1) = \text{loc}(m_2)$.
-  Either every path from the environment to $m_1$ contains a holder for $m_2$ (as above), or the path to $m_2$ contains a holder for $m_1$.
+***Mutable Reference reaching Mutable Reference:***
+If a mutable reference \(m_1 = \text{mref}(l_1,\tau_1)\) reaches another mutable reference \(m_2 = \text{mref}(l_2,\tau_2)\):
+
+- If $l_1 \neq l_2$:
+  Accessing $m_1$ should expire $m_2$, meaning: $(l_1 \to^{*} l_2)\ \wedge\ (l_1 \neq l_2) \implies \text{AExp}_{(\rho,\sigma,\Lambda)}(m_1,\tau_2)$.
+
+- If $l_1 = l_2$:
+  Either accessing $m_1$ should expire $m_2$ or vice versa, formally: $(l_1 \to^{*} l_2)\ \wedge\ (l_1 = l_2) \implies \Bigl( \text{AExp}_{(\rho,\sigma,\Lambda)}(m_1,\tau_2) \vee\ \text{AExp}_{(\rho,\sigma,\Lambda)}(m_2,\tau_1) \Bigr)$.
+
+The three reaching properties ensure that references follow the [Stacked Borrows Model](../background/stacked-borrows.md).
+Accessing a box expires all references borrowed from it, as well as references borrowed from reachable boxes that point to locations reachable from the box.
+Accessing a mutable reference expires all mutable and immutable references borrowed from it or borrowed from its reachable boxes.
 
 ***Immutable Reference not reaching Mutable Reference:***
-No available immutable reference should reach available mutable reference.
+An available immutable reference $ir = \text{iref}(l_i, \tau_i)$  should not reach a location that an available mutable reference points to:
 
-<!-- TODO: CHECKOUT THE EDITED VERSION -->
+$$
+\forall ir, mr.\ 
+\Bigl(
+\text{Avail}(ir,\Lambda) \wedge \text{Avail}(mr,\Lambda)
+\wedge ir=\text{iref}(l_i,\tau_i) \wedge mr=\text{mref}(l_m,\tau_m)
+\Bigr)
+\implies
+\neg (l_i \to^{*} l_m)
+$$
+
+This property results in immutable references reaching a constant portion of memory as long as they remain available.
+
+### Overview
+
+
