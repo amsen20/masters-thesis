@@ -543,6 +543,21 @@ Similarly, accessing the mutable reference passes through the hold at location \
 
 TODO: A DIAGRAM THAT THE LIST IN IMEM WITH THE REFERENCES
 
+### Memory Management
+
+In a well-formed imem memory, it is safe to free a location that points to an unavailable box, as well as the location that the unavailable box points to, if no available direct box still points to that location.
+This safety follows from the fact that once a box becomes unavailable, it is no longer reachable from any available linear variable, and all references to it are also unavailable.
+
+It is also safe to free a location that points to an immutable or mutable reference.
+For the same reason, no available variable can reach such references once they become unavailable.
+
+Moreover, as in a purely linear memory, when a linear location that points to a composite linear value is freed, the locations contained within that value can also be safely freed, unless the locations point to a box, an immutable reference, or a mutable reference.
+
+In this way, all memory regions reachable through references are managed safely and statically.
+
 ## imem Implementation
 
+The Scala library imem enforces static rules to ensure that the part of program memory it manages remains well formed throughout execution.  
+These static rules include [ownership](./ownership.md) rules and [borrow-checking](./borrow-checking.md) rules.
+Because Scala provides many features that may interfere with these rules, the [soundness](./soundness.md) section presents guidelines that a program must follow to keep its memory well formed.
 
