@@ -425,3 +425,124 @@ The following diagram illustrates the available and reachable part of a well-for
 
 TODO: ADD A DIAGRAM FOR IMEM MEMORY
 
+### An Example
+
+The following example shows a two-element list encoded in imem.
+
+The set of active lifetimes is:
+
+$$
+\Lambda = \{\alpha\}
+$$
+
+The linear environment contains a single variable that points to the list:
+
+$$
+\rho_L = \{ \texttt{list} \mapsto l_{\mathsf{list}} \}
+$$
+
+The linear memory is composed of boxes and linear values that represent the structure of the list and its elements:
+
+$$
+\begin{aligned}
+\sigma_L = \{&
+l_{\mathsf{list}} \mapsto \text{box}(l_1,\{\alpha\}), \\[2pt]
+&l_1 \mapsto \langle l_{\mathsf{h1}},\ l_{\mathsf{t1}} \rangle, \\
+&l_{\mathsf{h1}} \mapsto \text{box}(n_{42},\{\alpha\}), \\
+&l_{\mathsf{t1}} \mapsto \text{box}(l_2,\{\alpha\}), \\[2pt]
+&l_2 \mapsto \langle l_{\mathsf{h2}},\ l_{\mathsf{t2}} \rangle, \\
+&l_{\mathsf{h2}} \mapsto \text{box}(n_{99},\{\alpha\}), \\
+&l_{\mathsf{t2}} \mapsto \text{box}(l_{\texttt{none}},\{\alpha\}), \\[2pt]
+&l_{\texttt{none}} \mapsto \langle\ \rangle
+\}
+\end{aligned}
+$$
+
+The nonlinear memory stores the integers:
+
+$$
+\sigma_{NL} =
+\{
+n_{42} \mapsto 42,
+\quad
+n_{99} \mapsto 99
+\}
+$$
+
+The variable \(\texttt{list}\) points to a location that contains a box referencing the first element of the list.  
+This first element is stored at \(l_1\) and is a linear value composed of two boxed fields.  
+The first field, located at \(l_{\mathsf{h1}}\), is a box that points to a nonlinear integer value.  
+The second field, located at \(l_{\mathsf{t1}}\), is a box that points to the second element of the list.
+
+TODO: A DIAGRAM of how it looks
+
+The following example extends the previous list by adding a mutable reference to the first element and an immutable reference to the second element, while keeping the memory well formed.
+
+The set of available lifetimes now includes three elements:
+
+$$
+\Lambda = \{\alpha,\beta,\gamma\}
+$$
+
+The lifetimes \(\beta\) and \(\gamma\) are newly introduced. Lifetime \(\beta\) is added to the lifetime set of the mutable reference, \(\tau_m = \{\alpha,\beta\}\), while lifetime \(\gamma\) is added to the lifetime set of the immutable reference, \(\tau_i = \{\alpha,\beta,\gamma\}\).
+
+The environments now contain three variables:
+
+$$
+\rho_L =
+\{
+\texttt{list} \mapsto l_{\mathsf{list}},
+\quad
+\texttt{firstMut} \mapsto l_{\mathsf{mut}}
+\}
+\qquad
+\rho_{NL} =
+\{
+\texttt{secondImm} \mapsto n_{\mathsf{secondImm}}
+\}
+$$
+
+To support these references, the linear memory is extended with additional holds and a mutable reference:
+
+$$
+\begin{aligned}
+\sigma_L = \{&
+\underbrace{l_{\mathsf{list}} \mapsto \text{hold}(l_{\mathsf{listBox}},\beta)}_{\texttt{list} \text{ reaches the root box through a }\beta\text{-hold}}, \\
+&l_{\mathsf{listBox}} \mapsto \text{box}(l_1,\{\alpha\}), \\[2pt]
+&l_1 \mapsto \langle l_{\mathsf{h1}},\ l_{\mathsf{t1}} \rangle, \\
+&l_{\mathsf{h1}} \mapsto \text{box}(n_{42},\{\alpha\}), \\
+&l_{\mathsf{t1}} \mapsto \text{box}(l_2,\{\alpha\}), \\[2pt]
+&l_2 \mapsto \langle l_{\mathsf{h2}},\ l_{\mathsf{t2}} \rangle, \\
+&l_{\mathsf{h2}} \mapsto \text{box}(n_{99},\{\alpha\}), \\
+&l_{\mathsf{t2}} \mapsto \text{box}(l_{\texttt{none}},\{\alpha\}), \\
+&l_{\texttt{none}} \mapsto \langle\ \rangle, \\[6pt]
+&\underbrace{l_{\mathsf{mut}} \mapsto \text{hold}(l_{\mathsf{mutCell}},\gamma)}_{\texttt{firstMut} \text{ reaches the mref through a }\gamma\text{-hold}}, \\
+&l_{\mathsf{mutCell}} \mapsto \text{mref}(n_{42},\{\alpha,\beta\})
+\}
+\end{aligned}
+$$
+
+The nonlinear memory is also extended to include an immutable reference:
+
+$$
+\sigma_{NL} =
+\{
+n_{42} \mapsto 42,
+\quad
+n_{99} \mapsto 99,
+\quad
+n_{\mathsf{secondImm}} \mapsto \text{iref}(n_{99},\{\alpha,\beta,\gamma\})
+\}
+$$
+
+In this configuration, imem allows the program to hold a mutable reference to the first list element and an immutable reference to the second element at the same time, without requiring the list to be deconstructed.
+
+If the program accesses the box that points to the first element, the access must pass through the hold at location \(l_{\mathsf{list}}\). This action expires lifetime \(\beta\), which in turn causes both the mutable reference and the immutable reference to become unavailable.
+
+Similarly, accessing the mutable reference passes through the hold at location \(l_{\mathsf{mut}}\). This access expires lifetime \(\gamma\), which results in the immutable reference becoming unavailable.
+
+TODO: A DIAGRAM THAT THE LIST IN IMEM WITH THE REFERENCES
+
+## imem Implementation
+
+
