@@ -543,6 +543,25 @@ Similarly, accessing the mutable reference passes through the hold at location \
 
 TODO: A DIAGRAM THAT THE LIST IN IMEM WITH THE REFERENCES
 
+<!--
+
+TODO: CHECK WHICH PARTS OF THE CONTENT MATCHES AND CHECK IF THE DIAGRAM IS STILL USABLE OR NOT
+
+If a program follows imem’s static rules, it cannot mutably borrow a box that lies within the reachable nodes of another box that is already immutably borrowed.
+This restriction applies when one box can access another box by dereferencing the box to its resource.
+The [borrow checking](./borrow-checking.md) and [ownership](./ownership.md) sections describe this rule and its implications in more detail.
+When the program follows imem static rules, the resulting object graph has the structure as follows:
+
+![Imem Memory Overview with Static Rules](../img/imem-memory-overview.png){: width="450"}
+
+Another difference in the memory layout, when static rules are followed, is that some boxes and references are stored inside linear values rather than directly in variables within the execution scope.
+These linear values are called `ValueHolder`s.
+As the diagram illustrates, each connected component has exactly one box, one mutable reference, or multiple immutable references directly accessible through variables in the current scope.
+When the program unlocks a `ValueHolder`, imem invalidates the previous access point by making the old variable unavailable and then stores the new access point, which may be a box or a reference, in a fresh variable.
+The [borrow checking](./borrow-checking.md) section explains this mechanism in more detail.
+-->
+
+
 ### Memory Management
 
 In a well-formed imem memory, it is safe to free a location that points to an unavailable box, as well as the location that the unavailable box points to, if no available direct box still points to that location.
