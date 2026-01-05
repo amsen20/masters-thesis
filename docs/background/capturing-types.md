@@ -6,5 +6,6 @@ The same as Capturing types.
 
 ## Escape Checking
 
+## Access Control
 <!-- TODO: define avoidance -->
 <!-- TODO: mention the categorization of capture set appearing in a type in background, and elaborate on it. -->

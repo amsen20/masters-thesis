@@ -58,11 +58,11 @@ imem does not provide interfaces for creating references out of thin air; instea
 To borrow a box, imem provides the following interfaces:
 
 ```Scala
-def borrowImmutBox[@scinear.HideLinearity T, Owner^, ..., newOwner^ >: {Owner}, ...](
+def borrowImmutBox[@scinear.HideLinearity T, Owner^, ..., newOwner^ >: {..., Owner}, ...](
   self: Box[T, Owner]^
 )(...): (ImmutRef[T, newOwner], ...) = ...
 
-def borrowMutBox[@scinear.HideLinearity T, Owner^, ..., newOwner^ >: {Owner}, ...](
+def borrowMutBox[@scinear.HideLinearity T, Owner^, ..., newOwner^ >: {..., Owner}, ...](
   self: Box[T, Owner]^
 )(...): (MutRef[T, newOwner], ...) = ...
 ```
@@ -73,7 +73,7 @@ Note that the resulting reference does not capture `self`. Therefore, escape-che
 
 For both functions, the owner type parameter `newOwner` of the returned reference must be a superset of the `Owner` type parameter.
 As a result, the reference's owners include all the lifetime capabilities owners of the box from which the reference is borrowed.
-By enforcing the constraint `newOwner^ >: {Owner}`, imem ensures the *Box outliving references invariant* when borrowing a box.
+By enforcing the constraint `newOwner^ >: {..., Owner}`, imem ensures the *Box outliving references invariant* when borrowing a box.
 
 ### Borrowing an Immutable Reference
 
@@ -82,7 +82,7 @@ To enable this, the program first borrows a box immutably and then reborrows the
 The following is imem's interface for reborrowing an immutable reference:
 
 ```Scala
-def borrowImmut[@scinear.HideLinearity T, Owner^, ..., newOwner^ >: {Owner}, ...](
+def borrowImmut[@scinear.HideLinearity T, Owner^, ..., newOwner^ >: {..., Owner}, ...](
   self: ImmutRef[T, Owner]^
 )(...): ImmutRef[T, newOwner] = ...
 ```
@@ -90,7 +90,7 @@ def borrowImmut[@scinear.HideLinearity T, Owner^, ..., newOwner^ >: {Owner}, ...
 `borrowImmut` for an immutable reference is similar to `borrowImmutBox`.
 The returned reference does not capture `self`.
 Therefore, even if `self` is escape-checked, the program can copy the returned reference and store it freely.
-In addition, the `newOwner` type parameter, with the constraint `newOwner^ >: {Owner}`, ensures that reborrowed immutable references live no longer than the original immutable reference, in line with the *Box outliving references invariant*.
+In addition, the `newOwner` type parameter, with the constraint `newOwner^ >: {..., Owner}`, ensures that reborrowed immutable references live no longer than the original immutable reference, in line with the *Box outliving references invariant*.
 
 ### Borrowing a Mutable Reference
 
@@ -100,7 +100,7 @@ imem allows the program to reborrow a mutable reference either mutably or immuta
 `borrowMut` mutably borrows a mutable reference and produces another mutable reference.
 
 ```Scala
-def borrowMut[@scinear.HideLinearity T, Owner^, ..., newOwnerKey, newOwner^ >: {Owner}, ...](
+def borrowMut[@scinear.HideLinearity T, Owner^, ..., newOwnerKey, newOwner^ >: {..., Owner}, ...](
   self: MutRef[T, Owner]^
 )(...): (MutRef[T, newOwner], ...) = ...
 ```
@@ -114,7 +114,7 @@ As a result, the original reference, and transitively the box, outlives the deri
 To immutably borrow a mutable reference, imem provides `borrowImmut`:
 
 ```Scala
-def borrowImmut[@scinear.HideLinearity T, Owner^, ..., newOwner^ >: {Owner}, ...](
+def borrowImmut[@scinear.HideLinearity T, Owner^, ..., newOwner^ >: {..., Owner}, ...](
   self: MutRef[T, Owner]^
 )(...): (ImmutRef[T, newOwner], ...)
 ```
@@ -268,6 +268,8 @@ TODO: AN EXAMPLE OF MODYFING A BOX INSIDE READ SCOPE CAUSING PROBLEM. ALSO MUTAB
 
 The following table summarizes the scopes and the actions permitted within them:
 
+<span id="access-table"></span>
+
 | Access type | Scopes that have it | Enables |
 |---|---|---|
 | read | default scope, `derefForMoving`, `writeAction`, `readAction` | `borrowImmutBox`, `borrowImmutBox`, `read` |
@@ -276,9 +278,206 @@ The following table summarizes the scopes and the actions permitted within them:
 
 ### Write and Move capabilities
 
+Imem uses the [access control](../background/capturing-types.md#access-control) use case of capture checking to enforce the operation rules described above.
+
+Imem defines two capabilities:
+
+- `WriteCap`: Any function that captures this capability in its type is allowed to call imem interfaces that require write access.
+- `MoveCap`: Any function that captures this capability in its type is allowed to call imem interfaces that require move access.
+
+Because read access is permitted in every scope, imem does not define a separate capability for it.
+
+These capabilities are propagated through the program using an implicit context parameter that every imem interface requires.
+The following shows the `Context` class:
+
+```Scala
+class Context[WC^, MC^] private[imem] ()
+```
+
+The `Context` is a simple class with two type parameters, both of which are capture sets:
+
+- `WC^`: imem instantiates it with the write capability.
+- `MC^`: imem instantiates it with the move capability.
+
+A program that uses imem must pass its entry point to the `withImem` function:
+
+```Scala
+def withImem[T](block: [@caps.use WC^, MC^] => Context[WC, MC]^ => T): T =
+  object WC extends caps.Capability
+  object MC extends caps.Capability
+  val ctx = Context[{WC}, {MC}]()
+  block[{WC}, {MC}](ctx)
+```
+
+This function defines the capabilities, instantiates a context, and calls the program entry point.
+
+```Scala
+TODO: A SIMPLE PROGRAM ENTRY POINT
+```
+
+Each imem interface receives a `Context` instance as an implicit argument:
+
+```Scala
+// require read access:
+def borrowImmutBox[..., WC^, MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+def borrowImmut[..., WC^, MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+def borrowImmut[..., WC^, MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+def read[..., WC^, MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+
+// require write access:
+def borrowMutBox[..., @caps.use WC^, MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+def borrowMut[..., @caps.use WC^, MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+def write[..., @caps.use WC^, MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+def setBox[..., @caps.use WC^, MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+def swapBox[..., @caps.use WC^, MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+
+// require move access:
+def derefForMoving[..., WC^, @caps.use MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+def moveBox[..., WC^, @caps.use MC^](...)(using ctx: Context[WC, MC]^{...}): ... = ...
+```
+
+All functions have the capture set type parameters `WC^` and `MC^`, as well as an implicit parameter `ctx: Context[WC, MC]`.
+Functions that require write access use the write capability `WC^`, which the compiler recognizes through the `@caps.use` annotation.
+Similarly, functions that require move access use the move capability `MC^`.
+
+To distinguish which scopes have write or move access and which do not, imem annotates each continuation-passing-style argument with the exact capabilities it is allowed to use:
+
+```Scala
+def read[... T, Owner^, ... S, ctxOwner^, WC^, MC^](
+  ...,
+  readAction: Context[WC, MC]^{...} ?->{} T^ ->{Owner, ctxOwner} S
+  //                                    ^                      ^ does not mention `WC` nor `MC`.
+)(...): S = ...
+
+def write[... T, Owner^, ... S, ctxOwner^, @caps.use WC^, MC^](
+  ...,
+  writeAction:
+    Context[{WC}, {MC}]^{...} ?->{WC} T^ ->{Owner, ctxOwner, WC} S
+  //                              ^                          ^ mentions only `WC`.
+)(...): S = ...
+
+def derefForMoving[... T, Owner^, ctxOwner^, ... S, WC^, @caps.use MC^](
+  ...,
+  moveAction: Context[WC, MC]^{...} ?->{WC, MC} T^ ->{Owner, ctxOwner, WC, MC} S
+  //                                    ^   ^                          ^   ^ mentions both `WC` and `MC`.
+)(...): S = ...
+```
+
+Each action is annotated with the set of access capabilities it may use.
+In this way, as described in [access control](../background/capturing-types.md#access-control), the program can, in each scope, call only the interfaces that imem's annotations permit for that scope.
+
+```Scala
+TODO: AN EXAMPLE WHERE YOU CAN DO BORROWIMMUT IN READ BUT YOU CANNOT DO BORROWMUT.
+```
+
 ## Reference Owner Aggregation
 
-### Why
-### Context
+imem implements Reference Owner Aggregation to ensure that program memory follows the [Stacked Borrows Model](../background/stacked-borrows.md).
+In other words, it ensures that the [reaching properties](./memory-management.md#properties) are not violated.
 
+### Box and Reference Holding Insufficience
+
+By implementing [Box and Reference Holding](#box-and-reference-holding), imem ensures that, for a given value, all boxes and references that directly point to this value follow the Stacked Borrows Model.
+As a result, accessing any of these boxes or references expires the references that appear above it on the borrow stack.
+
+However, this mechanism is not sufficient when the program contains nested boxes and references that point to different boxes, where one box reaches another.
+In the following example, accessing the outer reference through its holder should expire the inner reference; otherwise, the *Stacked Borrows* invariant is violated.
+
+```Scala
+TODO: AN EXAMPLE OF NESTED BOXES WHERE THE OUTER BOX IS BORROWED MOUTABLY AND THEN THE INNER BOX IS BORROWED MUTABLY AND ACCESSING THE OUTER REFERENCE SHOULD EXPIRE THE INNER REFERECNE, CHECK THE MENTION BELOW
+```
+
+### Owner Aggregation
+
+To address this issue, imem ensures that when a reference is borrowed from another reference, either directly or indirectly, the lifetime set of the derived reference is a superset of the lifetime set of the original reference.
+In the example above, the owners of `outerMut1` should therefore be a subset of the owners of the `innerMut` reference.
+
+More precisely, suppose the program borrows
+\( r_O \in \{\text{Box}[T, O], \text{ImutRef}[T, O], \text{MutRef}[T, O]\} \)
+using one of imem’s borrowing interfaces. Assume that the borrowing point is reached through a sequence of references \( r_1, r_2, \ldots, r_n \), meaning that the borrow occurs within nested action scopes of `write` or `read` operations on these references, where
+\( r_i \in \{\text{Box}[T, O_i], \text{ImutRef}[T, O_i], \text{MutRef}[T, O_i]\} \).
+
+Then, the resulting reference
+\( r_d \in \{\text{MutRef}[T, O']\} \)
+must have an owner set that is a superset of the owner sets of all involved references, and \( r_O \). Formally:
+
+$$
+O' \supseteq O \cup \bigcup_{i=1}^{n} O_i
+$$
+
+As a consequence, in the following example, accessing the mutable reference to the outer box causes the reference to the inner box to expire.
+
+```Scala
+TODO: SHOW THAT THIS EXPIRATION HAPPENS
+```
+
+### Context Owner Aggregation
+
+In imem, the capture set of `Context` aggregates reference owners.
+Each imem interface receives an implicit context parameter, whose capture set represents the lifetimes accumulated throughout the program.
+
+To do this aggeregation, within the action scopes of `read` and `write` operations, imem extends the context capture set to include the owners of the accessed references.
+
+```Scala
+def read[... T, Owner^, ... S, ctxOwner^, ...](
+  self: ImmutRef[T, Owner]^,
+  readAction: Context[...]^{ctxOwner, Owner} ?-> T^ ->{...} S
+  //                       ^^^^^^^^^^^^^^^^^
+)(
+  using ctx: Context[...]^{ctxOwner}
+): S = ...
+
+def write[... T, Owner^, ... S, ctxOwner^, ...](
+  self: MutRef[T, Owner]^,
+  writeAction: Context[...]^{ctxOwner, Owner} ?->{...} T^ ->{...} S
+//                          ^^^^^^^^^^^^^^^^^
+)(
+  using ctx: Context[...]^{ctxOwner}
+): S = ...
+```
+
+In both the `read` and `write` functions, the capture set of the context parameter is `ctxOwner^` and the context passed to the action captures `{ctxOwner, Owner}`, which extends the capture set with the owners of the accessed reference.
+
+Furthermore, References' owners should include these accumulated owners.
+To do this, in the borrowing functions, the owners of the newly created reference, `newOwner`, must form a superset of both the original reference or box owner, `Owner`, and the aggregated owners, `ctxOwner`.
+In other words, the constraint is `newOwner^ >: {ctxOwner, Owner}`.
+
+```Scala
+def borrowImmutBox[... T, Owner^, ctxOwner^, newOwnerKey, newOwner^ >: {ctxOwner, Owner}, ...](
+  //                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  self: Box[T, Owner]^
+)(
+  using ctx: Context[...]^{ctxOwner}
+): (ImmutRef[T, newOwner], ...) = ...
+
+def borrowMutBox[... T, Owner^, ctxOwner^, newOwnerKey, newOwner^ >: {ctxOwner, Owner}, ...](
+  //                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  self: Box[T, Owner]^
+)(
+  using ctx: Context[...]^{ctxOwner}
+): (MutRef[T, newOwner], ...) = ...
+
+def borrowMut[... T, Owner^, ctxOwner^, newOwnerKey, newOwner^ >: {ctxOwner, Owner}, ...](
+  //                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  self: MutRef[T, Owner]^
+)(
+  using ctx: Context[...]^{ctxOwner}
+): (MutRef[T, newOwner], ...) = ...
+
+def borrowImmut[... T, Owner^, ctxOwner^, newOwnerKey, newOwner^ >: {ctxOwner, Owner}, ...](
+  //                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  self: MutRef[T, Owner]^
+)(
+  using ctx: Context[...]^{ctxOwner}
+): (ImmutRef[T, newOwner], ...) = ...
+
+def borrowImmut[... T, Owner^, ctxOwner^, newOwnerKey, newOwner^ >: {ctxOwner, Owner}, ...](
+  //                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  self: ImmutRef[T, Owner]^
+)(
+  using ctx: Context[...]^{ctxOwner}
+): ImmutRef[T, newOwner] = ...
+```
+
+Based on these two features, the context carries the union of the owners of all references used to reach a given program point, and the owners of any newly created reference are a superset of this aggregated set.
 
