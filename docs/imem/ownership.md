@@ -7,7 +7,7 @@ This section explains how imem statically manages ownership of boxes and resourc
 Ownership management in imem aims to satisfy the following [properties](./memory-management.md#properties) of a well-formed imem memory:
 
 - No dangling references
-- Direct box uniqueness
+- Direct Box Uniqueness
 
 The following subsections presents an implementation-level definition of the formal concepts described in the [memory management section](./memory-management.md).
 

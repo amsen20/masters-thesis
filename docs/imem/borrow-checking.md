@@ -4,6 +4,17 @@ This section describes how imem manages borrowing and the references that result
 
 ## Borrow Checking Goals
 
+imem performs borrow checking to ensure that the following well-formedness properties are satisfied:
+
+- Borrowing Validity
+- Reaching properties:
+
+  - Box reaching Reference
+  - Mutable Reference reaching Immutable Reference
+  - Mutable Reference reaching Mutable Reference
+
+The following subsections redefine some of the formal concepts described in the [memory management section](./memory-management.md) to clarify how imem utilize them in implementation.
+
 ### Definitions
 
 ***Dereferencing a reference:***
@@ -12,26 +23,41 @@ That is, $deref(r) = t$.
 
 ### Goals
 
-***Box outliving references invariant:***  
-During execution, for any box \(b : \text{Box}[T, O]\) and any immutable reference \(r : \text{ImmutRef}[T, O']\) or mutable reference \(r : \text{MutRef}[T, O']\), if \(deref(b) = deref(r)\), then \(b\) outlives \(r\).
-That is, \(O \subset O'\).
+***Borrowing validity invariant:***
+During execution, for every immutable or mutable reference \(r \in \{\text{ImmutRef}[T, O'], \text{MutRef}[T, O']\}\), there is a box \(b : \text{Box}[T, O]\) that \(r\) is borrowed from, meaning \(deref(b) = deref(r)\) and \(O \subset O'\).
 
-***Stacked borrows:***  
-At any point during program execution, consider a resource \(t : T\) with the following:
+***Stacked borrows:***
+At any point during program execution, the following are true:
 
-- A box \(b : \text{Box}[T, \ldots]\) such that \(deref(b) = t\).
-- A sequence of mutable references \(m_1, m_2, \ldots, m_N\), with \(N \ge 0\), such that \(deref(m_j) = t\) and, for \(1 \le j < N\), \(m_j\) is borrowed before \(m_{j+1}\).
-- A sequence of immutable references \(i_1, i_2, \ldots, i_M\), with \(M \ge 0\), such that \(deref(i_j) = t\).
+- **Box reaching Reference:**
+  If a box \(b: \text{Box}[T, O]\) resource reaches a reference \(r \in \{\text{ImmutRef}[T', O'], \text{MutRef}[T', O']\}\) resource, in other words \(deref(b)\) reaches \(deref(r)\), then accessing \(b\) by an available variable causes \(r\) to become unavailable.
 
-The following always hold:
+- **Mutable Reference reaching Immutable Reference:**
+  If a mutable reference \(mr: \text{MutRef}[T, O]\) resource reaches an immutable reference \(ir \in \text{ImmutRef}[T', O']\) resource, in other words \(deref(mr)\) reaches \(deref(ir)\), then accessing \(mr\) by an available variable causes \(ir\) to become unavailable.
 
-- If the program uses an available variable that refers to \(b\), then all mutable references \(m_1, \ldots, m_N\) and all immutable references \(i_1, i_2, \ldots, i_M\) become unavailable.
-- If the program uses an available variable that refers to \(m_j\), then all mutable references \(m_{j+1}, \ldots, m_N\) and all immutable references \(i_1, i_2, \ldots, i_M\) become unavailable.
+- **Mutable Reference reaching Mutable Reference:**
+  If a mutable reference \(m_1: \text{MutRef}[T, O]\) resource reaches a mutable reference \(m_2: \text{MutRef}[T', O']\) resource, in other words \(deref(m_1)\) reaches \(deref(m_2)\), then:
 
-***Immutable reference constant view:***  
-Any box reachable from an immutable reference remains constant for as long as the immutable reference lives.
+  - If \(deref(m_1) \neq deref(m_2)\):
+    Accessing \(m_1\) by an available variable causes \(m_2\) to become unavailable.
+  - If \(deref(m1) = deref(m2)\):
+    Either accessing \(m_1\) by an available variable causes \(m_2\) to become unavailable, or accessing \(m_2\) by an available variable causes \(m_1\) to become unavailable.
 
-imem achieves *Box outliving references invariant* using [Reference Ownership Management](#reference-ownership-management), *Stacked borrows* using [Box and Reference Holding](#box-and-reference-holding) and (#reference-owner-aggregation), and *Immutable reference constant view* using [Static Permission Management](#static-permission-management-of-operations).
+**Mutable reference structurally constant view:**
+
+If a mutable reference \( mr: \text{MutRef}[T, O] \) is available, the structure of the subtree rooted at \( deref(mr) \) remains unchanged for as long as \( mr \) is available.
+This means that, for any box \( b: \text{Box}[T', O'] \) whose resource lies in that subtree, meaning \( deref(mr) \) reaches \( deref(b) \), the program does not perform `derefForMoving` or `moveBox` on \( b \) while \( mr \) is available.
+
+**Immutable reference constant view:**
+If an immutable reference \(ir : \text{ImmutRef}[T, O]\) is available, then the entire subtree of \(deref(ir)\) remains read-only.
+This means that:
+
+- There is no available mutable reference \(mr : \text{MutRef}[T', O']\) whose resource is in that subtree, meaning \(deref(ir)\) reaches \(deref(mr)\).
+- For any box \(b : \text{Box}[T', O']\) whose resource is in that subtree, \(deref(ir)\) reaches \(deref(b)\), the program does not perform `setBox`, `swapBox`, `derefForMoving` or `moveBox` on \(b\) as long as \(ir\) is available.
+
+imem ensures *Borrowing validity* through [Reference Ownership Management](#reference-ownership-management).
+It enforces *Stacked borrows* through [Box and Reference Holding](#box-and-reference-holding) and [Reference Owner Aggregation](#reference-owner-aggregation).
+It also guarantees the *Mutable reference structurally constant view* and the *Immutable reference constant view* through [Static Permission Management](#static-permission-management-of-operations).
 
 ## Reference Ownership Management
 
@@ -73,7 +99,7 @@ Note that the resulting reference does not capture `self`. Therefore, escape-che
 
 For both functions, the owner type parameter `newOwner` of the returned reference must be a superset of the `Owner` type parameter.
 As a result, the reference's owners include all the lifetime capabilities owners of the box from which the reference is borrowed.
-By enforcing the constraint `newOwner^ >: {..., Owner}`, imem ensures the *Box outliving references invariant* when borrowing a box.
+By enforcing the constraint `newOwner^ >: {..., Owner}`, imem ensures *Borrowing validity* when borrowing a box.
 
 ### Borrowing an Immutable Reference
 
@@ -90,7 +116,7 @@ def borrowImmut[@scinear.HideLinearity T, Owner^, ..., newOwner^ >: {..., Owner}
 `borrowImmut` for an immutable reference is similar to `borrowImmutBox`.
 The returned reference does not capture `self`.
 Therefore, even if `self` is escape-checked, the program can copy the returned reference and store it freely.
-In addition, the `newOwner` type parameter, with the constraint `newOwner^ >: {..., Owner}`, ensures that reborrowed immutable references live no longer than the original immutable reference, in line with the *Box outliving references invariant*.
+In addition, the `newOwner` type parameter, with the constraint `newOwner^ >: {..., Owner}`, ensures that reborrowed immutable references live no longer than the original immutable reference, in line with *Borrowing validity* goal.
 
 ### Borrowing a Mutable Reference
 
@@ -146,7 +172,7 @@ def unlockHolder[KeyType, @scinear.HideLinearity T](
 The `unlockHolder` function returns the value only when a key instance that matches the `KeyType` type parameter of the holder is provided.
 To make the function usable by other imem interfaces, the holder captures the universal capability, and the returned value captures the holder in case the holder is subject to [escape checking](../background/capturing-types.md#escape-checking).
 
-Imem ties a `ValueHolder` to a `Lifetime` by using an internal opaque dependent type as the key.  
+Imem ties a `ValueHolder` to a `Lifetime` by using an internal opaque dependent type as the key.
 In this way, unlocking the holder always causes the associated lifetime to expire.
 
 ```Scala
@@ -159,7 +185,7 @@ end Lifetime
 ```
 
 In the Lifetime class, `Key` is an opaque type member.
-The only way to obtain an instance of this type is through the `getKey` method of `Lifetime` because the type is opaque outside the class.  
+The only way to obtain an instance of this type is through the `getKey` method of `Lifetime` because the type is opaque outside the class.
 At the same time, because `Key` is a type member, each instance of type `Lifetime` has its own [path-dependent](../background/dependent-types.md) `Key` type that is unique to that instance.
 
 As shown below, a `ValueHolder[lf.Key, ...]` can only be opened by `lf` and by no other lifetime.
@@ -195,7 +221,7 @@ def borrowImmut[@scinear.HideLinearity T, Owner^, ..., newOwnerKey, newOwner^ >:
 ```
 
 All borrowing functions return a pair.
-The first element of the pair is the borrowed reference, and the second element is a value holder locked with the `newOwnerKey` type parameter and storing a value of the same type as the `self` parameter.  
+The first element of the pair is the borrowed reference, and the second element is a value holder locked with the `newOwnerKey` type parameter and storing a value of the same type as the `self` parameter.
 The `T` type parameter of the value holder is instantiated with the type of `self`, which captures `self` in case `self` is subject to [escape checking](../background/capturing-types.md#escape-checking).
 
 The following example demonstrates how a program can borrow a reference from another reference and then retrieve the original reference:
@@ -211,7 +237,7 @@ It then unlocks the holder by calling `lf.getKey`, which retrieves the original 
 
 ### Using References
 
-The main purpose of references is to provide access to a resource after it has been borrowed by the program.
+The main purpose of a reference is to provide access to a resource after the program borrows it.
 An immutable reference provides only read access through the `read` function, and a mutable reference provides both read and write access through the `write` function.
 
 ```Scala
@@ -272,9 +298,9 @@ The following table summarizes the scopes and the actions permitted within them:
 
 | Access type | Scopes that have it | Enables |
 |---|---|---|
-| read | default scope, `derefForMoving`, `writeAction`, `readAction` | `borrowImmutBox`, `borrowImmutBox`, `read` |
-| write | default scope, `derefForMoving`, `writeAction` | `setBox`, `swapBox`, `borrowMutBox`, `borrowMut`, `write` |
-| move | default scope, `derefForMoving` | `moveBox`, `derefForMoving` |
+| read | default scope, `moveAction`, `writeAction`, `readAction` | `borrowImmutBox`, `borrowImmutBox`, `read` |
+| write | default scope, `moveAction`, `writeAction` | `setBox`, `swapBox`, `borrowMutBox`, `borrowMut`, `write` |
+| move | default scope, `moveAction` | `moveBox`, `derefForMoving` |
 
 ### Write and Move capabilities
 
@@ -285,10 +311,10 @@ Imem defines two capabilities:
 - `WriteCap`: Any function that captures this capability in its type is allowed to call imem interfaces that require write access.
 - `MoveCap`: Any function that captures this capability in its type is allowed to call imem interfaces that require move access.
 
-Because read access is permitted in every scope, imem does not define a separate capability for it.
+Because imem permits read access in every scope, imem does not define a separate capability for it.
 
 These capabilities are propagated through the program using an implicit context parameter that every imem interface requires.
-The following shows the `Context` class:
+The following shows the `Context` class definition:
 
 ```Scala
 class Context[WC^, MC^] private[imem] ()
@@ -381,7 +407,8 @@ By implementing [Box and Reference Holding](#box-and-reference-holding), imem en
 As a result, accessing any of these boxes or references expires the references that appear above it on the borrow stack.
 
 However, this mechanism is not sufficient when the program contains nested boxes and references that point to different boxes, where one box reaches another.
-In the following example, accessing the outer reference through its holder should expire the inner reference; otherwise, the *Stacked Borrows* invariant is violated.
+In the following example, accessing the outer reference through its holder should expire the inner reference;
+otherwise, the *Stacked Borrows* invariant is violated.
 
 ```Scala
 TODO: AN EXAMPLE OF NESTED BOXES WHERE THE OUTER BOX IS BORROWED MOUTABLY AND THEN THE INNER BOX IS BORROWED MUTABLY AND ACCESSING THE OUTER REFERENCE SHOULD EXPIRE THE INNER REFERECNE, CHECK THE MENTION BELOW
@@ -392,14 +419,10 @@ TODO: AN EXAMPLE OF NESTED BOXES WHERE THE OUTER BOX IS BORROWED MOUTABLY AND TH
 To address this issue, imem ensures that when a reference is borrowed from another reference, either directly or indirectly, the lifetime set of the derived reference is a superset of the lifetime set of the original reference.
 In the example above, the owners of `outerMut1` should therefore be a subset of the owners of the `innerMut` reference.
 
-More precisely, suppose the program borrows
-\( r_O \in \{\text{Box}[T, O], \text{ImutRef}[T, O], \text{MutRef}[T, O]\} \)
-using one of imem’s borrowing interfaces. Assume that the borrowing point is reached through a sequence of references \( r_1, r_2, \ldots, r_n \), meaning that the borrow occurs within nested action scopes of `write` or `read` operations on these references, where
-\( r_i \in \{\text{Box}[T, O_i], \text{ImutRef}[T, O_i], \text{MutRef}[T, O_i]\} \).
-
-Then, the resulting reference
-\( r_d \in \{\text{MutRef}[T, O']\} \)
-must have an owner set that is a superset of the owner sets of all involved references, and \( r_O \). Formally:
+More precisely, suppose the program borrows \( r_O \in \{\text{Box}[T, O], \text{ImutRef}[T, O], \text{MutRef}[T, O]\} \) using one of imem’s borrowing interfaces.
+Assume that the borrowing point is reached through a sequence of references \( r_1, r_2, \ldots, r_n \), meaning that the borrow occurs within nested action scopes of `write` or `read` operations on these references, where \( r_i \in \{\text{Box}[T, O_i], \text{ImutRef}[T, O_i], \text{MutRef}[T, O_i]\} \).
+Then, the resulting reference \( r_d \in \{\text{MutRef}[T, O']\} \) must have an owner set that is a superset of the owner sets of all involved references, and \( r_O \).
+Formally:
 
 $$
 O' \supseteq O \cup \bigcup_{i=1}^{n} O_i
