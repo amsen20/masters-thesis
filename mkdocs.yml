@@ -51,6 +51,7 @@ nav:
     - Discussion on soundness: imem/soundness.md
   - Evaluation:
     - Overview: evaluation/index.md
+    - Baselines: evaluation/baselines.md
     - Case study: evaluation/case-study.md
   - Related works:
     - Overview: related-works/index.md
