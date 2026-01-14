@@ -314,7 +314,98 @@ It is important to note that this approach does not produce compile‑time error
 The Linear Scala implementation of the linked list serves as a baseline for evaluating the practicality of imem.
 This implementation uses the [Scinear](../scinear/index.md) plugin to enforce linearity rules.
 
+This implementation focuses on the case where the elements themselves are linear, and it does not bypass linearity rules using the `@HideLinearity` annotation.
+A non-linear type can still be an element of the list with the help of a linear wrapper.
+
 ### Internal Structures
 
+The internal structures are pretty much similar to Rust and vanilla Scala implementations:
 
+```Scala
+class List[T <: Linear](val head: Link[T]) extends Linear
+
+type Link[T <: Linear] = Option[Node[T]]
+
+class Node[T <: Linear](val elem: T, val next: Link[T]) extends Linear
+
+
+// `unapply` functions to destruct a node into its element and its link to the next node:
+object Node:
+  def unapply[T <: Linear](node: Node[T]): Option[(T, Link[T])] =
+    Some((node.elem, node.next))
+end Node
+```
+
+As in the other baselines, this version's implementation of linked list is a chain of nodes connected to one another.
+Each node contains an element and a link to the next node.
+A link is an `Option[Node[T]]`, and the list itself holds a link to the first node, if one exists.
+
+All structures are linear, because their fields have linear types, and `Link[T]` is an `Option` that is promoted to a linear type.
+To allow access to both fields of a `Node`, an `unapply` method is implemented for the `Node` type.
+
+### User Interface
+
+Because of Scinear rules, this version defines the user interface as functions rather than methods:
+
+```Scala
+ def push[T <: Linear](list: List[T], elem: T): List[T] =
+  val newNode = Node(elem, list.head)
+  List(Some(newNode))
+
+def pop[T <: Linear](list: List[T]): (Option[T], List[T]) =
+  list.head match
+    case Some(Node(elem, next)) =>
+      (Some(elem), List(next))
+    case None =>
+(None, List(None))
+```
+
+Because the elements are linear, it is not possible to implement `peek` or `peekMut` without violating linearity rules.
+In linear memory, linear objects form a tree structure.
+The return value of a `peek`/`peekMut` operation would refer to an element while the list node still exists, which breaks this tree structure.
+
+The `push` function takes a list instance and returns a modified list with the new element prepended.
+It first creates a new node whose `next` field points to the current first node of the list.
+It then constructs a new list that points to this newly created node.
+
+Similarly, the `pop` function takes a list as input and returns a modified list.
+In addition, it returns an option containing the removed element.
+The function checks whether `list.head` is `None`.
+If so, no element is removed.
+Otherwise, it returns the first node's element and creates a new list that points to the former node’s `next` link.
+
+### Iterators
+
+#### Consuming Iterator
+
+Because a consuming iterator takes ownership of the list by consuming it, the iterator can be implemented without violating linearity rules:
+
+```Scala
+def intoIter[T <: Linear](list: List[T]): IntoIter[T] = IntoIter(list)
+
+class IntoIter[T <: Linear](val list: List[T]) extends Linear
+
+def hasNext[T <: Linear](iter: IntoIter[T]): (IntoIter[T], Boolean) =
+  val (head, notHasNext) = scinear.utils.peekLinearOption(iter.list.head)
+  (IntoIter(List(head)), !notHasNext)
+
+def next[T <: Linear](iter: IntoIter[T]): (Option[T], IntoIter[T]) =
+  val (elem, nextList) = pop(iter.list)
+  (elem, IntoIter(nextList))
+```
+
+As in the other implementations, the `IntoIter` structure simply stores the list as one of its fields.
+Both `IntoIter` and `List` are linear types, which ensures that no other object can reference the `List` instance once it is passed to `IntoIter`.
+
+The `hasNext` function checks whether the list’s head is empty by using `scinear.utils.peekLinearOption`.
+Scinear provides this to allow the program to inspect whether an option is `None` without consuming its value.
+After this check, `hasNext` reconstructs the iterator and the list using the retrieved head node option.
+
+The `next` function calls `pop` to remove the first element of the list, if one exists.
+It then returns the popped element and constructs a new iterator pointing to the list produced by the `pop` operation.
+
+#### Mutable Iterator
+
+Similar to the `peek` and `peekMut` functions, mutable iterators are incompatible with linearity rules.
+A linear mutable iterator would need to hold a reference to the list while another reference to the same list already exists, which would violate linear memory well‑formedness by allowing multiple linear objects to point to the same linear value.
 
