@@ -348,7 +348,7 @@ To allow access to both fields of a `Node`, an `unapply` method is implemented f
 Because of Scinear rules, this version defines the user interface as functions rather than methods:
 
 ```Scala
- def push[T <: Linear](list: List[T], elem: T): List[T] =
+def push[T <: Linear](list: List[T], elem: T): List[T] =
   val newNode = Node(elem, list.head)
   List(Some(newNode))
 
