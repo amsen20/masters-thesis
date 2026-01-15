@@ -85,7 +85,7 @@ Then it returns the element stored in the popped node, which results in moving t
 
 The `peek` and `peek_mut` functions both return an option, because the list might be empty, containing a reference to the first node's element.
 The returned reference is immutable in `peek` and mutable in `peek_mut`.
-The peeking functions, borrow a reference to the first node, if it exists, using `as_ref` or `as_mut`, and then dereference the reference and borrowing the node's element.
+The peeking functions, borrow a reference to the first node, if it exists, using `as_ref` or `as_mut`, and then dereference the reference and borrow the node's element.
 This dereferencing and borrowing happens in `&node.elem`.
 
 The `peek` and `peek_mut` functions both return an option, since the list may be empty.
