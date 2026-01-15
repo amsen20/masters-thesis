@@ -131,7 +131,7 @@ During iteration, the `next` method repeatedly pops elements from the list, one 
 
 #### Mutable Iterator
 
-A mutable iterator, borrows the list mutable, unlike consuming iterator does not change the list ownership.
+A mutable iterator borrows the list mutably, and unlike a consuming iterator, it does not change the list ownership.
 The following is the mutable iterator implementation:
 
 A mutable iterator borrows the list mutably and, unlike a consuming iterator, does not take ownership of the list.
