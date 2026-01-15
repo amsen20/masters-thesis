@@ -319,7 +319,7 @@ A non-linear type can still be an element of the list with the help of a linear 
 
 ### Internal Structures
 
-The internal structures are pretty much similar to Rust and vanilla Scala implementations:
+The internal structures are quite similar to the Rust and vanilla Scala implementations:
 
 ```Scala
 class List[T <: Linear](val head: Link[T]) extends Linear
