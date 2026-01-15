@@ -336,7 +336,7 @@ object Node:
 end Node
 ```
 
-As in the other baselines, this version's implementation of linked list is a chain of nodes connected to one another.
+As in the other baselines, this version's implementation of a linked list is a chain of nodes connected to one another.
 Each node contains an element and a link to the next node.
 A link is an `Option[Node[T]]`, and the list itself holds a link to the first node, if one exists.
 
