@@ -357,7 +357,7 @@ def pop[T <: Linear](list: List[T]): (Option[T], List[T]) =
     case Some(Node(elem, next)) =>
       (Some(elem), List(next))
     case None =>
-(None, List(None))
+      (None, List(None))
 ```
 
 Because the elements are linear, it is not possible to implement `peek` or `peekMut` without violating linearity rules.
@@ -409,3 +409,4 @@ It then returns the popped element and constructs a new iterator pointing to the
 Similar to the `peek` and `peekMut` functions, mutable iterators are incompatible with linearity rules.
 A linear mutable iterator would need to hold a reference to the list while another reference to the same list already exists, which would violate linear memory well‑formedness by allowing multiple linear objects to point to the same linear value.
 
+Thus, a mutable iterator is not possible for the Linear Scala implementation of the linked list.
