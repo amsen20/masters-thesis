@@ -7,6 +7,7 @@ The same as Capturing types.
 ## Escape Checking
 
 <!-- TODO: The escape-checking section in capturing types in background details what it means for a scope to be bound to it. -->
+<!-- TODO: Mention that how escape checking propagates to fields. -->
 
 ## Access Control
 <!-- TODO: define avoidance -->
