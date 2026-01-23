@@ -2,7 +2,7 @@
 
 ## Rust
 
-This Rust implementation follows the approach described in [here](https://rust-unofficial.github.io/too-many-lists/second.html).
+This Rust implementation follows the approach described in the [Learn Rust With Entirely Too Many Linked Lists](https://rust-unofficial.github.io/too-many-lists/second.html) tutorial.
 
 ### Internal Structures
 
@@ -96,7 +96,7 @@ They then dereference this node reference and borrow its element, which occurs i
 
 ### Iterators
 
-In evaluation, all versions try to implement two kinds of iterators: a consuming iterator and a mutable iterator.
+In this section, all versions try to implement two kinds of iterators: a consuming iterator and a mutable iterator.
 
 #### Consuming Iterator
 
@@ -251,12 +251,15 @@ end List
 The overall logic of this implementation matches the Rust version, except that it does not include ownership or borrow checking.
 One notable difference is that `peekMut` returns an `Option[Node[T]]`, which conflicts with the goal of hiding internal data structures from the user.
 However, this design choice is necessary, because there is no alternative way to return a value such that modifying the element also updates the element stored in the list.
+Returning a reference to the element and assigning a new value to that reference would not modify the element stored in the list's node.
 
 ### Iterators
 
 #### Consuming Iterator
 
-The following illustrates how a consuming iterator is implemented in this Scala version of the linked list:
+Because standard Scala does not support object ownership, an iterator that consumes a list and becomes its owner cannot be implemented directly in Scala.
+However, Scala can mimic the Rust implementation of a consuming iterator.
+The following illustrates the translation of a consuming iterator in Scala:
 
 ```Scala
 class List[T](var head: Link[T] = None):
@@ -345,7 +348,7 @@ To allow access to both fields of a `Node`, an `unapply` method is implemented f
 
 ### User Interface
 
-Because of Scinear rules, this version defines the user interface as functions rather than methods:
+Because of Scinear rules, this version defines the user interface as functions rather than methods, because in linear classes methods do not have access to the linear fields and `this`:
 
 ```Scala
 def push[T <: Linear](list: List[T], elem: T): List[T] =
