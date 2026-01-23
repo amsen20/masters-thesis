@@ -509,3 +509,198 @@ The differences are as follows:
 - The `peekMut` function annotates the `WC^` type parameter with `@caps.use` because it calls `borrowMutBox` in its body.
 - The `peekMut` function uses `write` and `borrowMutBox` instead of the `read` and `borrowImmutBox` functions used by `peek`.
 
+## Iterators
+
+Both consuming and mutable iterators can be implemented in imem.
+
+### Consuming iterators
+
+The following is the class definition of a consuming iterator in imem:
+
+```Scala
+class ConsumingIterator[T <: scinear.Linear, O^](_list: Box[List[T, O], O]) extends scinear.Linear:
+	val list: Box[List[T, O], O]^{this} = _list
+end ConsumingIterator
+```
+
+The consuming iterator is a linear class with an external `list` field.
+This field is a `Box[List[T, O]]` that points to the list that the iterator consumes.
+The class has two type parameters: the element type `T` and the ownership set of the list, `O^`.
+The iterator stores the list in a box that has the same lifetime as the list.
+
+The following shows the implementation of the “has next” functionality:
+
+```Scala
+def hasNextCI[T <: scinear.Linear, @caps.use O1^, @caps.use O2^ >: {O1}, WC^, MC^](
+  self: ImmutRef[ConsumingIterator[T, O1], O2]^
+)(
+  using ctx: Context[WC, MC]^
+): Boolean =
+  // access the `self`'s reference resource, which is the consuming iterator
+  read[ConsumingIterator[T, O1], O2, Boolean, {ctx}, {WC}, {MC}](self,
+    ctx ?=> iter =>
+      // new lifetime for borrowing the iterator's list box immutably
+      val lf = Lifetime[{ctx, O2}]()
+
+      // borrow the iterator's list box immutably
+      val (listRef, listHolder) = borrowImmutBox[List[T, O1], O1, {ctx}, lf.Key, lf.Owners, {WC}, {MC}](iter.list)
+      // check whether the list is empty
+      val hasNext = !isEmptyList[T, {O1}, lf.Owners, {WC}, {MC}](listRef)
+
+      // use both `lf` and `listHolder` linear variables
+      unlockHolder(lf.getKey(), listHolder).consume()
+
+      // return the result
+      hasNext
+  )
+```
+
+The function type parameters follow the same pattern as those in the `push`, `pop`, and `peek` linked list functions.
+The `hasNextCI` function takes an immutable reference to a consuming iterator, `ImmutRef[ConsumingIterator[T, O1], O2]^`, which is the iterator.
+The function then borrows this reference to access the iterator, borrows the box that points to the iterator’s list immutably, and calls `isEmptyList` to determine whether the list is empty.
+Finally, it returns the result.
+
+The `nextCI` function's signature is similar:
+
+```Scala
+def nextCI[T <: scinear.Linear, @caps.use O1^, @caps.use O2^ >: {O1}, @caps.use WC^, @caps.use MC^](
+  self: MutRef[ConsumingIterator[T, O1], O2]^
+)(
+  using ctx: Context[WC, MC]^
+): Option[Box[T, O2]] =
+  // access the `self`'s reference resource, which is the consuming iterator
+  val listRef = write[ConsumingIterator[T, O1], O2, MutRef[List[T, O1], {O2, ctx}], {ctx}, {WC}, {MC}](self,
+    ctxInner ?=> iter =>
+      // borrow the iterator's list box mutably
+      val (listRef, listHolder) = borrowMutBox[List[T, O1], O1, {ctxInner}, NeverUsableKey, {O2, ctx}, {WC}, {MC}](iter.list)
+      // use `listHolder` by consuming because it is a linear variable that is no longer needed
+      listHolder.consume()
+      // return the mutable reference to the iterator's list
+      listRef
+  )
+
+  // pop an element from the list
+  val poppedElem = pop[T, {O1}, {O2, ctx}, {O2, ctx}, {WC}, {MC}](listRef)
+  // here the popped element's runtime value matches the function's return value
+  // but, its lifetime capture set is {O2}, and the function returns a box with
+  // with lifetime capture set {O2}
+
+  // move the `poppedElem` from {O2, ctx} to {O2}
+  val movedPoppedElem =
+    // without consuming the option, check whether `poppedElem` is empty or not
+    val (poppedElem2, isNone) = scinear.utils.peekLinearOption(poppedElem)
+    if isNone then
+      // converge if branches by consuming `poppedElem2`
+      poppedElem2.get
+      // return None with the correct type
+      None
+    else
+      // move the box pointing to the popped element to the needed owner
+      Some(moveBox[T, {O2, ctx}, {O2}, {WC}, {MC}](poppedElem2.get))
+
+  // return the moved popped element
+  movedPoppedElem
+```
+
+The function takes a mutable reference to the iterator as an argument.
+The function requires this reference to be mutable because the function modifies the structure of the list in the iterator in order to return the box containing the first element.
+
+The implementation starts by popping an element from the list.
+To achieve this, the function first borrows the iterator reference to access the list.
+It then mutably borrows the box that points to the list and returns that reference.
+
+When borrowing the box that points to the list, which is `iter.list`, the program no longer needs access the box later and only needs a mutable reference to the list.
+Therefore, the box is borrowed with `{O2, ctx}` as the owner of the reference and `NeverUsableKey` as the key.
+This approach allows the program to borrow the reference without tying it to a new lifetime.
+The `NeverUsableKey` is an opaque type for which no instances can be created, which makes the `ValueHolder` impossible to unlock.
+Further details are provided in the imem [soundness](../imem/soundness.md) section.
+
+At this point, the function has a mutable reference to the list and uses it to pop an element.
+The popped element is the element that the iterator emits, but its type is not correct.
+This mismatch occurs because the popped element’s box has the lifetime set `{O2, ctx}`, which is the same as the mutable reference.
+
+The lifetime set cannot be `{O2}` because the `pop` function signature specifies that the returned box lifetime, `O3^` in `pop`'s signature, must be a superset of the reference lifetime, `O2^` in `pop`'s signature.
+At this usage point, the reference lifetime is `{O2, ctx}`.
+
+To change the lifetime set of the popped box from `{O2, ctx}` to `{O2}`, the function moves the box if the result of `pop` is not `None`.
+
+The `intoIter` function creates a new consuming iterator:
+
+```Scala
+def intoIter[T <: scinear.Linear, @caps.use O1^, O2^, WC^, @caps.use MC^](
+  self: Box[List[T, O1], O1]
+)(
+  using ctx: Context[WC, MC]^
+): ConsumingIterator[T, O2] =
+  // dereference the `self` box, to access the `self`'s resource, which is the list
+  derefForMoving[List[T, O1], O1, {ctx}, ConsumingIterator[T, {O2}], {WC}, {MC}](
+    self,
+    list =>
+      // move all elements from owner {O1} to owner {O2}
+      val movedListHead = moveAllElems[T, {O1}, O2, {WC}, {MC}](list.head)
+      // create a new list in owner {O2} with the moved head
+      val newList = List[T, {O2}](movedListHead)
+      // create a new box pointing to the new list with owner lifetime set {O2}
+      val newListBox = newBox[List[T, {O2}], {O2}](newList)
+      // create and return the consuming iterator
+      ConsumingIterator[T, {O2}](newListBox)
+  )
+```
+
+The function gets a box pointing to a list and returns a consuming iterator.
+The important thing about the signature is that the list and its box's lifetime set is `O1` while the consuming iterator type parameter that is the consuming iterator lifetime set is instantiated with `O2`.
+Furthermore `O1^` and `O2^` have no relation with each other.
+
+The `intoIter` function moves all of the list's element from the `O1` lifetime set to the `O2` lifetime set to match the return argument.
+This would be unneccasry of both of the given list and the iterator had the same lifetime as the list, but that would made the list less expressive by not allowing consuming iterators to actually consume a list, by changing their lifetime.
+
+The `moveAllElems` function does the elements moving:
+
+```Scala
+def moveAllElems[T <: scinear.Linear, @caps.use O1^, O2^, WC^, @caps.use MC^](
+  self: Box[Link[T, O1], O1]^
+)(
+  using ctx: Context[WC, MC]^
+): Box[Link[T, O2], O2] =
+  // dereference the `self` box, to access the `self`'s resource, which is a link to the next node
+  derefForMoving[Link[T, O1], O1, {ctx}, Box[Link[T, O2], O2], {WC}, {MC}](
+    self,
+    ctx ?=> nextOpt =>
+      // without consuming the option, check whether `nextOpt` is empty or not
+      val (nextOpt2, isEmpty) = scinear.utils.peekLinearOption(nextOpt)
+
+      // the behavior changes based on whether there is a next node or not
+      if isEmpty then
+        // converge if branches by consuming `nextOpt2`
+        nextOpt2.get
+        // return a box pointing to None
+        newBox[Link[T, O2], O2](None)
+      else
+        // get the box pointing to the next node
+        val nodeBox = nextOpt2.get
+        // access the `nodeBox`'s resource, which is the next node
+        val newBoxToLink = derefForMoving[Node[T, O1], O1, {ctx}, Box[Link[T, O2], O2], {WC}, {MC}](
+          nodeBox,
+          node =>
+            // get the element and the next link of the node
+            val (nodeElem, nodeNext) = Node.unapply(node)
+            // move the element
+            val movedElemBox = moveBox[T, {O1}, O2, {WC}, {MC}](nodeElem)
+            // move all elements from the next link recursively
+            val movedNextBox = moveAllElems[T, {O1}, O2, {WC}, {MC}](nodeNext)
+            // create a new node in owner lifetime set {O2} with the moved element and moved next link
+            val newNode = Node[T, O2](movedElemBox, movedNextBox)
+            // return a box pointing to a link that points to the new node
+            newBox[Link[T, O2], O2](Some(newBox[Node[T, O2], O2](newNode)))
+        )
+        // return the new box to link that points the new next node
+        newBoxToLink
+  )
+```
+
+The `moveAllElems` function takes a box that points to a link referencing a node, `Box[Link[T, O1], O1]`, and returns the same structure with a different lifetime set as the owner, `Box[Link[T, O2], O2]`.
+The function recursively traverses the nodes by dereferencing the boxes, moves the elements in each node, and attaches them to new nodes that use the new lifetimes.
+
+### Mutable iterator
+
+<!-- TODO: Will be added -->
