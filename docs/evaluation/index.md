@@ -17,7 +17,7 @@ To evaluate the performance and practicality of imem, and to clarify what imem e
 - ***Rust:***
   A minimal implementation in Rust is used as Rust is the main inspiration for imem’s design.
   This baseline allows a direct comparison between imem’s ownership and borrow checking and Rust’s corresponding mechanisms.
-  The implementation follows the approach presented in [this book](https://rust-unofficial.github.io/too-many-lists/index.html)'s [*An Ok Stack*](https://rust-unofficial.github.io/too-many-lists/second.html).
+  The implementation follows the approach presented in the tutorial [Learn Rust With Entirely Too Many Linked Lists](https://rust-unofficial.github.io/too-many-lists/index.html)'s [*An Ok Stack*](https://rust-unofficial.github.io/too-many-lists/second.html).
 - ***Vanilla Scala:***
   A simple Scala implementation that demonstrates how the data structure would look like in Scala without ownership or mutability control.
   This version is largely a direct translation of the Rust implementation into Scala.
