@@ -703,4 +703,230 @@ The function recursively traverses the nodes by dereferencing the boxes, moves t
 
 ### Mutable iterator
 
-<!-- TODO: Will be added -->
+The following presents the definition of the mutable reference class:
+
+```Scala
+class MutableIterator[T <: scinear.Linear, O1^, O2^ >: {O1}](_boxToLink: Box[MutRef[Link[T, O1], O2], O2]) extends scinear.Linear:
+  val boxToLink: Box[MutRef[Link[T, O1], O2], O2]^{this} = _boxToLink
+end MutableIterator
+```
+
+To implement a mutable iterator in imem, the structure must hold a mutable reference to a node in the list.
+Because this mutable reference changes each time the iterator advances to the next node, it must be stored in a mutable field.
+According to the imem's [guidelines](../imem/soundness.md), `Box` is the only source of mutation that is statically controlled by imem.
+As a result, the iterator’s `boxToLink` field is a box containing a mutable reference that points to a link, which either refers to the next node to be visited or is `None`.
+
+Another important aspect is that the `MutableIterator` class has two capture set type parameters:
+
+- `O1^`: the owner set of the list and, transitively, the nodes and links.
+- `O2^`: the owner set of the mutable reference, which must be a superset of `O1^`.
+
+Because the class includes both parameters, an iterator instance expires when any lifetime capability in either `O1^` or `O2^` expires.
+Since `O2^` is a superset of `O1^`, this condition is equivalent to the expiration of any member of `O2^`.
+
+The `iterMut` function provides an interface to create a mutable iterator from a mutable reference to a list:
+
+```Scala
+def iterMut[T <: scinear.Linear, @caps.use O1^, O3^, O2^ >: {O1, O3}, @caps.use WC^, MC^](
+  self: MutRef[List[T, O1], O2]
+)(
+  using ctx: Context[WC, MC]^{O3}
+): MutableIterator[T, O1, O2] =
+  // access the `self`'s reference resource, which is the list
+  write[List[T, O1], O2, MutableIterator[T, O1, O2], {ctx}, {WC}, {MC}](self,
+    ctx ?=> list =>
+      // borrow the list's head mutably
+      val (headRef, listHeadHolder) = borrowMutBox[Link[T, O1], O1, {ctx}, NeverUsableKey, {O2}, {WC}, {MC}](list.head)
+      // use `listHeadHolder` by consuming because it is a linear variable that is not needed
+      listHeadHolder.consume()
+      // create and return the mutable iterator
+      MutableIterator[T, O1, O2](newBox[MutRef[Link[T, O1], O2], O2](headRef))
+  )
+```
+
+The `iterMut` function takes three type parameters:
+
+- `O1^`: as in the `MutableIterator` class definition, this is the owner set associated with the list.
+- `O2^`: as in `MutableIterator`, this is the owner set of both the mutable reference and the mutable iterator.
+- `O3^`: the owner set aggregated by the context.
+
+The owner set `O2^` must be a superset of `O1^`, due to the same requirement in `MutableIterator`'s definition.
+It must also be a superset of `O3^` because, during iteration, the program repeatedly borrows list nodes and updates the mutable reference to point to newly borrowed mutable references.
+If the context-aggregated owner set is not a subset of the reference owner set, the [newly borrowed](../imem/borrow-checking.md#context-owner-aggregation) references cannot use `O2^` as their lifetime set.
+
+The function takes a mutable reference to the list and returns a mutable iterator that points to the first node of the list.
+To construct this mutable reference, the function accesses the list, borrows its head link to the first node, and creates a new box that points to the borrowed head reference.
+
+```Scala
+def hasNextMI[T <: scinear.Linear, @caps.use O1^, O3^, @caps.use O2^ >: {O1, O3}, WC^, MC^](
+  self: ImmutRef[MutableIterator[T, O1, O2], O3]^
+)(
+  using ctx: Context[WC, MC]^{O3}
+): Boolean =
+  // access the `self`'s reference resource, which is the mutable iterator
+  read[MutableIterator[T, O1, O2], O3, Boolean, {ctx}, {WC}, {MC}](self,
+    ctx ?=> iter =>
+      // new lifetime for borrowing the iterator's box to the link,
+      // which is pointing to the next node to be visited, immutably
+      val lf = Lifetime[{O2}]()
+
+      // borrow the iterator's box to the link, immutably
+      val (refToLink, boxToLinkHolder) = borrowImmutBox[MutRef[Link[T, O1], O2], O2, {ctx}, lf.Key, lf.Owners, {WC}, {MC}](iter.boxToLink)
+      // access the `refToLink`'s resource, which is the mutable reference to the link pointing to the next node to be visited
+      val hasNext = read[MutRef[Link[T, O1], O2], lf.Owners, Boolean, {ctx, O3}, {WC}, {MC}](refToLink,
+        ctx ?=> linkMutRef =>
+          // new lifetime for borrowing the mutable reference to the link immutably
+          val lf = Lifetime[{ctx, O2}]()
+
+          // borrow the link mutable reference immutably
+          val (linkRef, linkHolder) = borrowImmut[Link[T, O1 ], O2, {ctx, O3}, lf.Key, lf.Owners, {WC}, {MC}](linkMutRef)
+          // access the `linkRef`'s resource, which is a link to the next node to be visited
+          val hasNext = read[Link[T, O1], lf.Owners, Boolean, {ctx, O3}, {WC}, {MC}](linkRef,
+            ctx ?=> link =>
+              // check whether the link is empty or not
+              !link.isEmpty
+          )
+
+          // use both `lf` and `linkHolder` linear variables
+          unlockHolder(lf.getKey(), linkHolder).consume()
+
+          // return the result
+          hasNext
+      )
+
+      // use both `lf` and `boxToLinkHolder` linear variables
+      unlockHolder(lf.getKey(), boxToLinkHolder).consume()
+
+      // return the result
+      hasNext
+  )
+```
+
+The `hasNextMI` function uses the same type parameters as `iterMut`.
+It does not modify or move any boxes and does not borrow any reference or box mutably.
+Therefore, it does not require annotating `WC` or `MC` with `@caps.use`.
+
+The function takes an immutable reference to the iterator.
+It accesses the iterator by reading the reference argument and then borrows the box that holds the mutable reference to a link in the list.
+Next, it reads through the borrowed reference and the mutable reference to access the link and checks whether the link is empty.
+Because the reference to the link is mutable and the function avoids using the `write` function, which would capture `WC`, it first borrows the mutable reference immutably and then accesses the link.
+
+The `nextMI` function's implementation is a bit tricky:
+
+```Scala
+def nextMI[T <: scinear.Linear, @caps.use O1^, O3^, @caps.use O2^ >: {O1, O3}, @caps.use WC^, MC^](
+  self: MutRef[MutableIterator[T, O1, O2], O3]^
+)(
+  using ctx: Context[WC, MC]^{O3}
+): Option[MutRef[T, O2]] =
+  // access the `self`'s reference resource, which is the mutable iterator
+  write[MutableIterator[T, O1, O2], {O3}, Option[MutRef[T, O2]], {O2}, {WC}, {MC}](self,
+    ctx ?=> iter =>
+      val boxToLink = iter.boxToLink
+
+      // create a dummy box pointing to a mutable reference that points to a link that points to `None` for swapping with `boxToLink`:
+      val dummyBoxToLink =
+        // create the box pointing to a link that is `None`
+        val dummyLinkBox = newBox[Link[T, O1], O2](None)
+        // borrow the box pointing to a link
+        val (dummyLinkMutRef, dummyBoxHolder) = borrowMutBox[Link[T, O1], O2, {ctx}, NeverUsableKey, {O2}, {WC}, {MC}](dummyLinkBox)
+        // use `dummyBoxHolder` by consuming because it is a linear variable that is not needed
+        dummyBoxHolder.consume()
+        // create and return the box pointing to the mutable reference to the link, which is `None`
+        newBox[MutRef[Link[T, O1], O2], O2](dummyLinkMutRef)
+
+      // swap the iterators' box to link with a dummy box pointing to `None`, so that the function can access the box's value without:
+      // - expiring the iterators' box
+      // - being forced to define a new lifetime for borrowing that will appear in every subsequent reference borrowed
+      //   and making it incompatible with the function's return type
+      val (iterBoxToLink, tempBoxToLink) = swapBox[MutRef[Link[T, O1], O2], {O2}, {O2}, {ctx}, {WC}, {MC}](boxToLink, dummyBoxToLink)
+
+      // borrow the `tempBoxToLink` mutably
+      val (refToLink, tempBoxToLinkHolder) = borrowMutBox[MutRef[Link[T, O1], O2], O2, {ctx}, NeverUsableKey, {O2}, {WC}, {MC}](tempBoxToLink)
+      // use `tempBoxToLinkHolder` by consuming because it is a linear variable that is no longer needed
+      tempBoxToLinkHolder.consume()
+      // access the `refToLink`'s resource, which is the mutable reference to the link pointing to the next node to be visited
+      writeWithLinearArg[MutRef[Link[T, O1], O2], O2, Option[MutRef[T, O2]], {ctx}, Box[MutRef[Link[T, O1], O2], O2], {WC}, {MC}](refToLink,
+        iterBoxToLink,
+        ctx ?=> (linkMutRef, iterBoxToLink) =>
+          // access the `linkMutRef`'s resource, which is a link to the next node to be visited
+          writeWithLinearArg[Link[T, O1], O2, Option[MutRef[T, O2]], {ctx}, Box[MutRef[Link[T, O1], O2], O2], {WC}, {MC}](linkMutRef,
+            iterBoxToLink,
+            ctx ?=> (link, iterBoxToLink) =>
+              // without consuming the option, check whether `link` is empty or not
+              val (link2, isEmpty) = scinear.utils.peekLinearOption(link)
+
+              // the behavior changes based on whether there is a next node or not
+              if isEmpty then
+                // converge if branches by consuming `link2`
+                link2.get
+                // leave iterator's box to link unchanged, it is now pointing to `None`, which is correct
+                iterBoxToLink.consume()
+                // return None, no next element
+                None
+              else
+                // get the box pointing to the next node to be visited
+                val nodeBox = link2.get
+                // borrow the next node to be visited mutably
+                val (nodeRef, nodeBoxHolder) = borrowMutBox[Node[T, O1], O1, {ctx}, NeverUsableKey, {O2}, {WC}, {MC}](nodeBox)
+                // use `nodeBoxHolder` by consuming because it is a linear variable that is not needed
+                nodeBoxHolder.consume()
+                // access the `nodeRef`'s resource, which is the next node to be visited
+                val elemMutRef = writeWithLinearArg[Node[T, O1], {O2}, MutRef[T, O2], {ctx}, Box[MutRef[Link[T, O1], O2], O2], {WC}, {MC}](nodeRef,
+                  iterBoxToLink,
+                  ctx ?=> (node, iterBoxToLink) =>
+                    // decompose the node to get its element and next link
+                    val (nodeElem, nodeNext) = Node.unapply(node)
+
+                    // borrow the box pointing to the link pointing to the next node mutably
+                    val (nextLinkMutRef, nextLinkBoxHolder) = borrowMutBox[Link[T, O1], O1, {ctx}, NeverUsableKey, {O2}, {WC}, {MC}](nodeNext)
+                    // use `nextLinkBoxHolder` by consuming because it is a linear variable that is not needed
+                    nextLinkBoxHolder.consume()
+
+                    // update the iterator's box to link to point to the next node's link
+                    setBox(iterBoxToLink, nextLinkMutRef)
+
+                    // borrow the node's element mutably
+                    val (nodeElemMutRef, nodeElemHolder) = borrowMutBox[T, O1, {ctx}, NeverUsableKey, {O2}, {WC}, {MC}](nodeElem)
+                    // use `nodeElemHolder` by consuming because it is a linear variable that is not needed
+                    nodeElemHolder.consume()
+
+                    // return the mutable reference to the node's element
+                    nodeElemMutRef
+                )
+
+                // return the mutable reference to the next element
+                Some(elemMutRef)
+            )
+      )
+  )
+```
+
+The `nextMI` function uses the same type parameters as `iterMut` and `hasNext`.
+It borrows several boxes mutably, so the function captures `WC`.
+The function reflects this mutable borrowing capability in its signature by annotating the `WC^` type parameter with `@caps.use`.
+
+The function returns a mutable reference to the current element and, at the same time, updates the iterator to point to the next node.
+To achieve this, the `nextMI` function performs the following steps:
+
+1. Access the current node visited by the iterator.
+2. Mutably borrow the node’s box that contains the element.
+3. Mutably borrow the node’s box that contains the link to the next node.
+4. Update the iterator’s box to hold the newly borrowed mutable reference that points to the link of the next node.
+
+<!-- TODO: A DIAGRAM DISPLAYING THE STATE AND THE UPDATES AND NEW THINGS HAVE TO BE CREATED -->
+
+Operations 2 and 3 involve borrowing new mutable references, `nodeElemMutRef` and `nextLinkMutRef`, from the fields of the node reached by the iterator’s box.
+Operation 4 then updates the iterator’s box, `iter.boxToLink`, which the function must access in order to reach the current node.
+As a result, the function must both access the resource held by the iterator’s box, which requires borrowing it and using the `write` function, and update that resource.
+
+<!-- TODO: A DIAGRAM DISPLAYING THE TEMPORARY BOX AFTER SWAP -->
+
+Borrowing a box’s resource, or a box reachable from that resource, and then updating the same box, which is `iter.boxToLink` in this case, would expire the borrowed references due to the [reaching properties](../imem/memory-management.md).
+To avoid this issue, the `nextMI` function introduces a temporary box, `tempBoxToLink`, to temporarily hold the resource of the iterator’s box, `iter.boxToLink`.
+The function swaps the resources of `iter.boxToLink` and `tempBoxToLink`, which leaves the iterator’s box pointing to `None`.
+It then accesses the resource in `tempBoxToLink`, accesses the node if it exists, and borrows the box containing the node’s element as well as the box containing the link to the next node.
+Once both required references are available, namely the mutable reference to the current element and the mutable reference to the link to the next node, the function updates the iterator’s box with the latter and returns the former.
+
+<!-- TODO: A DIAGRAM DISPLAYING THE FINAL STATE -->
+
