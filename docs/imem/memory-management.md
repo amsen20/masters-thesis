@@ -106,8 +106,8 @@ In Scala, using Scinear, the following code constructs the memory described abov
 TODO: SCINEAR CODE THAT CONSTRUCTS THE LIST
 ```
 
-To allow the program to access the second element (for example, for reading) without ever creating a non-well-formed memory state;
-It must deconstruct the first element of the linear list, store that value in a separate variable, and then retain a linear variable that refers to the second element.
+To allow the program to access the second element (for example, for reading) without ever creating a non-well-formed memory state,
+it must deconstruct the first element of the linear list, store that value in a separate variable, and then retain a linear variable that refers to the second element.
 
 ```Scala
 TODO: SCINEAR CODE THAT ACCESSES THE SECOND ELEMENT
