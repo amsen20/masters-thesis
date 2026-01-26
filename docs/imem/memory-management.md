@@ -23,7 +23,7 @@ $$ \rho_{NL}: \text{Var}_{NL} \rightarrow \{ \text{Loc}_{NL} \cup \mathbb{Z} \} 
 
 The memory is also divided into linear and nonlinear.
 
-$$ \sigma_L: \text{L}_L \rightarrow \text{Val}_L $$
+$$ \sigma_L: \text{Loc}_L \rightarrow \text{Val}_L $$
 
 $$ \sigma_{NL}: \text{Loc}_{NL} \rightarrow \text{Val}_{NL} $$
 
