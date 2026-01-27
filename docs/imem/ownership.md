@@ -4,23 +4,23 @@ This section explains how imem statically manages ownership of boxes and resourc
 
 ## Ownership Goals
 
-The main goal of imem’s ownership management is:
+Ownership management in imem aims to satisfy the following [properties](./memory-management.md#properties) of a well-formed imem memory:
 
-- To avoid dangling boxes
-- To have only one direct box at a time for each resource
+- No dangling references
+- Direct Box Uniqueness
+
+The following subsections presents an implementation-level definition of the formal concepts described in the [memory management section](./memory-management.md).
 
 ### Definitions
 
-The following definitions clarify the ownership goals.
-
 ***Dereferencing a box:***
-Given a box $b: \text{Box}[T, \ldots]$ whose resource is $t: T$, dereferencing the box, $deref(b)$ would result in $t$. That is, $deref(b) = t$.
+Given a box \( b: \text{Box}[T, \ldots] \) whose resource is \( t: T \), dereferencing the box, \( deref(b) \), yields \( t \).
+That is, \( deref(b) = t \).
 
 ***Decompose a linear value***
-Given an instance $l$ of a linear class $L$ with fields of types $(T_1, T_2, \ldots, T_n)$, also referred to as a linear value $l: L$, decomposing the linear value using $decomp(l)$ yields the list of field values of $L$, $(l_1: T_1, l_2: T_2, l_3: T_3, \ldots, l_n: T_n)$.
+Given an instance \( l \) of a linear class \( L \) with fields of types \( (T_1, T_2, \ldots, T_n) \), also called a linear value \( l: L \), decomposing the value using \( decomp(l) \) yields the list of field values of \( L \), namely \( (l_1: T_1, l_2: T_2, l_3: T_3, \ldots, l_n: T_n) \).
 
 ***Reachability:***
-<!-- TODO: replace \(\) with $$ -->
 During program execution, a value \(v\), which can be an instance of any class, can reach another value \(v'\) if there exists a sequence of operations \(Op_1, Op_2, Op_3, \ldots, Op_n\) such that each \(Op_i\) is one of the following operations and \(Op_1 \circ Op_2 \circ Op_3 \circ \ldots \circ Op_n (v) = v'\):
 
 - If the input is a box \(b: \text{Box}[T, \ldots]\), the operation returns \(deref(b)\).
@@ -34,14 +34,14 @@ TODO: AN EXAMPLE OF REACHABILITY
 Given a value \(v\), the list of direct boxes of \(v\), denoted \(direct(v)\), consists of all boxes \(b\) such that \(deref(b) = v\).
 
 ***Available variable:***
-A variable is available in the program scope at any point during execution if referring to the variable in an expression does not produce a compiler error.
+A variable is available in the program scope at a point during execution if referring to the variable in an expression does not at that point produce a compiler error.
 In the imem context, this means:
 
 - The variable is defined in one of the enclosing scopes.
 - If the variable has a linear type, it has not expired.
-- If the variable type includes type parameters instantiated with capture-sets, any linear capability in the capture sets has not expired.
+- If the declared type of the variable includes type parameters instantiated with capture sets, any linear capability in those capture sets has not expired.
 
-***Resource***:  
+***Resource***:
 A resource is a value \(v\) that is reachable from available variables and satisfies the condition \(|direct(v)| \geq 1\).
 
 ***Aliveness:***
@@ -52,7 +52,7 @@ At each point during program execution, a box \(b: \text{Box}[T, \ldots]\) is al
 ***No dangling boxes***:
 During execution, all boxes that are reachable from available variables are alive.
 
-***One direct box***:
+***Direct box uniqueness***:
 Assume \(B\) is the set of all boxes reachable from available variables.
 At any point during program execution, for each value \(v\), \(|direct(v) \cap B| \leq 1\).
 In other words, for each resource \(r\), \(|direct(r) \cap B| = 1\).
@@ -92,7 +92,7 @@ TODO: TWO INTERTWINED LIFETIMES
 
 ## Box Ownership
 
-Unlike Rust, boxes in imem do not own themselves; instead, they are owned by lifetimes.
+Unlike in Rust, boxes in imem do not own themselves; instead, they are owned by lifetimes.
 From the imem perspective, boxes are linear instances whose resources can be accessed by converting them into immutable or mutable references through borrowing.
 On the other hand, as in Rust, the program can change a box’s owner by moving it.
 
@@ -117,7 +117,7 @@ def newBox[@scinear.HideLinearity T, Owner^](resource: T): Box[T, Owner] = ...
 The `newBox` function takes a resource instance as an argument and a capture set of owners as type arguments, and it returns a box that holds the given resource and is owned by the set of owners specified by the `Owner^` type argument.
 
 Note that the program supplies the resource, and imem assumes that the resource is not copied or stored elsewhere.
-If the resource is linear, for example, an instance of `Box`, the Scinear plugin statically enforces that the resource value is reachable only from the expression passed to `newBox`.
+If the resource is linear, such as an instance of `Box`, the Scinear plugin statically enforces that the resource value is reachable only from the expression passed to `newBox`.
 However, the resource may be non-linear.
 In that case, it is the program’s responsibility to handle any side effects that arise if the resource has additional aliases.
 
@@ -152,7 +152,7 @@ TODO: A NESTED DIRECTLY BOX WITH DIFFERENT OWNERS
 TODO: AN INDIRECT NESTED BOX WITH DIFFERENT OWNERS
 ```
 
-As illustrated in the example above, nested boxes may have different owners, which means that an inner box can be owned by a different set of lifetimes than the outer box. This situation may appear to allow the inner box’s owners to expire before those of the outer box, which would result in a dangling box:
+As illustrated in the example above, nested boxes may have different owners, which means that an inner box can be owned by a different set of lifetimes than the outer box. This situation may appear to allow the owners of the inner box to expire before those of the outer box, which would result in a dangling box:
 
 ```Scala
 TODO: THE LAST EXAMPLE OF TWO DIRECTED NESTED BOXES BUT THE INNER BOX LIFETIME IS USED
@@ -168,7 +168,6 @@ If a linear value \(l\) reaches a box \(b'\), then at least one field value \(f:
 
 The proof uses induction on the number of reachability operations needed to obtain \(b'\) from \(v\).
 Let \(n \ge 0\) be such that there exists a sequence \(Op_1, \ldots, Op_n\) with \(Op_1 \circ \cdots \circ Op_n (v) = b'\).
-Define the induction statement \(P(n)\) as follows:
 
 **Induction statement for \(n\) operations:**
 If \(v: V\) reaches \(b': \text{Box}[T', Owner']\) using \(n\) operations and \(lf \in Owner'\), then \(lf\) occurs in at least one capture-set instantiation of a type parameter of \(V\).
@@ -222,7 +221,7 @@ This choice allows an [escape-checked](../background/capturing-types.md#escape-c
 The [resource ownership](#resource-ownership) subsection explains why this property is essential.
 
 Second, the returned `Box` captures `self`, as indicated by the type `Box[T, Owner]^{self}`.
-Therefore, the returned reference remains bound to the same scope as the input argument.
+Therefore, if the `self` is [escape-checked](../background/capturing-types.md#escape-checking), then the returned reference is also escape-checked, meaning it remains bound to the same scope as the input argument.
 
 The other function is for swapping two boxes’ resources:
 
@@ -256,7 +255,7 @@ def moveBox[@scinear.HideLinearity T, Owner^, NewOwner^, ...](
 )(...): Box[T, NewOwner] = ...
 ```
 
-The `moveBox` function takes the current and the next owner as type parameters and returns a new `Box` instance with the updated owner.
+The `moveBox` function takes the current and the new owner as type parameters and returns a new `Box` instance with the updated owner.
 
 ```Scala
 TODO: AN EXAMPLE OF MOVING THAT ESCAPES THE MOVED BOX
@@ -265,11 +264,12 @@ TODO: AN EXAMPLE OF MOVING THAT ESCAPES THE MOVED BOX
 As with `setBox`, the `self` parameter captures the universal capability, but the returned box does not.
 Otherwise, the box instance resulting from the move would be unable to escape the scope of the original reference, which would make it impractical.
 
-A plain move operation can violate the *one direct box* goal.
-This occurs when the moved box instance remains reachable from available variables after the move.
+A plain move operation can violate the *Direct box uniqueness* goal when the program applies it to a box that is reached through `read` or `write` operations on references.
+This would result in the moved box instance remains reachable from available variables after the move.
+The operation rules in [borrow checking](./borrow-checking.md#operation-rules) detail more about this problem.
 To prevent this situation, imem enforces restrictions on move operations.
 
-By relying on [Static Permission Management of Operations](./borrow-checking.md#static-permission-management-of-operations), as described in the [borrow checking section](./borrow-checking.md), imem doesn't allow moving inside read or write operations.
+By relying on [Static Permission Management of Operations](./borrow-checking.md#static-permission-management-of-operations), as described in the [borrow checking section](./borrow-checking.md), imem doesn't allow moving inside `read` or `write` operations.
 As a result, when a box instance is reachable through other boxes, imem provides a dedicated dereferencing operation designed specifically for moving, called `derefForMoving`.
 
 imem’s interface for dereferencing a box for moving is as follows:
@@ -285,9 +285,12 @@ The `derefForMoving` receives a `self: Box`, which is the box that the operation
 The function also receives a `moveAction`, which is a continuation-passing-style argument.
 The `moveAction` receives the resource, escape-checked, as an argument.
 
+Typically, `moveAction` traverses the given resource to reach other boxes.
+It then either calls `derefForMoving` on those boxes to explore their resources or calls `moveBox` to set their owners to a new set of lifetimes.
+
 `derefForMoving` only returns the result of `moveAction`.
 Therefore, the box instance passed as the `self` argument expires after `derefForMoving`, and there is no way to recover it.
-This behavior is intentional, and the [Uniqueness of Direct Box subsection](#uniqueness-of-direct-box) explains how it preserves the *One direct box* goal.
+This behavior is intentional, and the [Uniqueness of Direct Box subsection](#uniqueness-of-direct-box-during-moving) explains how it preserves the *Direct box uniqueness* goal.
 
 TODO: A DIAGRAM OF DANGLING REFERENCE WHEN MOVING
 
@@ -307,15 +310,15 @@ TODO: AN EXAMPLE OF MOVING `Box[Box[Int, {lf1}]{lf1}]` to `lf2`
 
 ### Uniqueness of Direct Box During Moving
 
-The following lemma states that moving in imem preserves the *One direct box* property.
+The following lemma states that moving in imem preserves the *Direct box uniqueness* property.
 
-***direct-box-lemma:***  
+***direct-box-lemma:***
 Assume that every resource has exactly one direct box.
 After a `moveBox` or `derefForMoving` operation, every resource still has exactly one direct box.
 
 **Proof.** The proof consists of two parts, depending on the operation.
 
-**`moveBox`:**  
+**`moveBox`:**
 Assume that the program applies `moveBox` to a box \(b : \text{Box}[T, Owner]\).
 Since `Box` is a linear type, the program cannot reach \(b\) after \(b\) is passed to `moveBox`.
 The operation returns a box \(b' : \text{Box}[T, Owner']\), which is a direct box for the resource of \(b\).
@@ -323,11 +326,11 @@ Before the operation, \(b\) is the only reachable direct box for that resource.
 After the operation, \(b\) is unreachable and \(b'\) is reachable.
 Therefore, the resource has exactly one reachable direct box after the operation.
 
-**`derefForMoving`:**  
+**`derefForMoving`:**
 Assume that the program applies `derefForMoving` to a box \(b : \text{Box}[T, Owner]\).
 Since `Box` is a linear type, the program cannot reach \(b\) after it is passed to `derefForMoving`, and the program also cannot reach \(b\) during the `moveAction` continuation.
 
-During `moveAction`, the value \(t = deref(b)\) is passed to the continuation as a [escape-checked](../background/capturing-types.md#escape-checking) argument.
+During `moveAction`, the value \(t = deref(b)\) is passed to the continuation as an [escape-checked](../background/capturing-types.md#escape-checking) argument.
 The value \(t\) is not a resource because \(direct(t) = 0\).
 Moreover, the only box that provides access to \(t\) is \(b\), and \(b\) is inaccessible inside `moveAction`.
 Also, because the `newBox` function requires a resource argument with an empty capture set, the program, inside `moveAction`, cannot create a new box that turns \(t\) into a resource again.
@@ -356,7 +359,7 @@ In `swapBox`, both arguments, `self: Box[T, Owner]^` and `other: Box[T, OtherOwn
 
 ## Memory Overview
 
-Based on *One direct box* and *No dangling boxes*, the object graph of boxes that are reachable from available variables forms a tree structure at runtime.
+Based on *Direct box uniqueness* and *No dangling boxes*, the object graph of boxes that are reachable from available variables forms a tree structure at runtime.
 The following diagram illustrates this tree:
 
 TODO: A SIMPLE DIAGRAM OF BOXES FORMING A TREE
