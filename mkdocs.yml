@@ -33,6 +33,7 @@ nav:
     - Linear types: background/linear-types.md
     - Ownership: background/ownership.md
     - Stacked borrows: background/stacked-borrows.md
+    - Rust: background/rust.md
 
   - Scinear A linear type plugin for Scala:
     - Overview: scinear/index.md
@@ -51,7 +52,9 @@ nav:
     - Discussion on soundness: imem/soundness.md
   - Evaluation:
     - Overview: evaluation/index.md
-    - Case study: evaluation/case-study.md
+    - Baselines: evaluation/baselines.md
+    - imem: evaluation/imem.md
+    - Discussion: evaluation/discussion.md
   - Related works:
     - Overview: related-works/index.md
     - Dynamic memory management: related-works/dynamic-memory-management.md
