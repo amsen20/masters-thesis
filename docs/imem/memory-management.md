@@ -170,6 +170,133 @@ TODO: AN EXAMPLE OF `@HiderLinearity` CREATING CYCLIC DATA STRUCTURES
 
 imem uses `@HideLinearity` to provide a more expressive approach while still performing safe memory management statically.
 
+---------------------------------------------------------------------------------------------------------------
+THE INTERMEDIATE STATE BEGIN
+
+## imem memory
+
+imem extends linear memory by introducing new kinds of references.
+To explain the imem memory model more clearly, the first part describes these additional references, how a program uses them, the expected well-formedness, and the need for lifetimes.
+Then, the section introduces lifetimes and explains their role in tracking the availability of the additional references.
+
+### imem Additional References
+
+The program state is the same as the linear program state:
+
+$$
+(\rho, \sigma)
+$$
+
+imem extends linear values by introducing two kinds of linear references:
+
+$$
+\begin{aligned}
+  \text{Val}_L =
+  &\ \{ \langle v_1, \dots, v_k \rangle \mid v_i \in \text{Loc}_{L} \cup \text{Loc}_{NL} \cup \mathbb{Z} \} \\
+  &\ \cup \{ \text{box}(l) \mid l \in \text{Loc}_{L} \cup \text{Loc}_{NL} \} \\
+  &\ \cup \{ \text{mref}(l) \mid l \in \text{Loc}_{L} \cup \text{Loc}_{NL} \}
+\end{aligned}
+$$
+
+These linear references are:
+
+- A \(\text{box}(l)\) is a general reference that the program can borrow immutable and mutable references from.
+- A \(\text{mref}(l)\) is a mutable reference, which provides read-write access to location \(l\).
+
+In addition, imem extends nonlinear values by adding immutable references:
+
+$$
+\begin{aligned}
+  \text{Val}_{NL} =
+  &\ \{ \langle v_1, \dots, v_k \rangle \mid v_i \in \text{Loc}_{NL} \cup \mathbb{Z} \} \\
+  &\ \cup \{ \text{iref}(l) \mid l \in \text{Loc}_{L} \cup \text{Loc}_{NL} \}
+\end{aligned}
+$$
+
+An immutable reference \(\text{iref}(l)\) s similar to a mutable reference but provides read-only access to the location and is a nonlinear value.
+
+### Program Required Operations
+
+To make these references practical, the program must be able to create references from one another and use them to access specific values in memory.
+The following list of operations models the features required by a program to create and use imem references.
+These operations are defined as functions that take a program state and additional arguments, and either validate that the requested operation is valid or return a new state that results from applying the operation to the memory state.
+
+### Operations on Boxes
+
+- ***Create a New Box***: The operation gets a location \(l\) and creates a box that points to \(l\). 
+                          A fresh linear location \(k \in \text{Loc}_L\) points to the new box.
+
+$$
+\mathsf{newBox}\bigl((\rho,(\sigma_L,\sigma_{NL})),\ l,\ k\bigr)
+=
+\bigl(\rho,(\sigma_L[k \mapsto \text{box}(l)],\sigma_{NL})\bigr)
+$$
+
+- ***Borrow a Box Immutably***: \(\mathsf{borrowImmutBox}\) gets a box and creates an immutable reference that points to the same location. 
+                      A fresh nonlinear location \(k_{ir} \in \text{Loc}_{NL}\) points to the new immutable reference.
+                      Formally, If \(\sigma_L(k_b)=\text{box}(l)\) and \(k_{ir} \notin \mathrm{dom}(\sigma_{NL})\):
+
+$$
+\mathsf{borrowImmutBox}\bigl((\rho,(\sigma_L,\sigma_{NL})),\ k_b,\ k_{ir}\bigr)
+=
+\bigl(\rho,(\sigma_L,\sigma_{NL}[k_{ir} \mapsto \text{iref}(l)])\bigr)
+$$
+
+- ***Borrow a Box Mutably***: The \(\mathsf{borrowMutBox}\) operation behaves similar to \(\mathsf{borrowImmutBox}\), but it creates a mutable reference that points to the same location as the given box.
+                      As a result, a fresh linear location \(k_{mr} \in \text{Loc}_{L}\) points to the new mutable reference.
+                      The operation is valid if \(\sigma_L(k_b)=\text{box}(l)\) and \(k_{mr} \notin \mathrm{dom}(\sigma_{L})\):
+
+$$
+\mathsf{borrowMutBox}\bigl((\rho,(\sigma_L,\sigma_{NL})),\ k_b,\ k_{mr}\bigr)
+=
+\bigl(\rho,(\sigma_L[k_{mr} \mapsto \text{mref}(l)],\sigma_{NL})\bigr)
+$$
+
+### Operations on Immutable References
+
+- ***Borrow an Immutable Reference***: This operation re-borrows an immutable reference and creates a new immutable reference that points to the same location as the given immutable reference.
+                                       The memory stores the new immutable reference at a fresh nonlinear location \(k_{ir} \in \text{Loc}_{NL}\).
+                                       As a formal definition, If \(\sigma_{NL}(k_{ir})=\text{iref}(l)\) and \(k'_{ir} \notin \mathrm{dom}(\sigma_{NL})\), then:
+
+$$
+\mathsf{borrowImmut}_{\mathit{imm}}\bigl((\rho,(\sigma_L,\sigma_{NL})),\ k_{ir},\ k'_{ir}\bigr)
+=
+\bigl(\rho,(\sigma_L,\sigma_{NL}[k'_{ir} \mapsto \text{iref}(l)])\bigr)
+$$
+
+TODO: ADD A READING OPERATION HERE THAT ONLY CHECKS IF THE IMMUTABLE REFERENCE IS REACHABLE FROM ENV OR NOT
+
+### Operations on Mutable References
+
+- ***Borrow a Mutable Reference Mutably***: The operation \(\mathsf{borrowImmut}_{\mathit{mut}}\) gets a mutable reference and creates an immutable reference that points to the same location.
+                                            The new immutable reference is stored at a fresh nonlinear location \(k_{ir} \in \text{Loc}_{NL}\).
+                                            To define it formally, if \(\sigma_{L}(k_{mr})=\text{mref}(l)\) and \(k_{ir} \notin \mathrm{dom}(\sigma_{NL})\):
+
+$$
+\mathsf{borrowImmut}_{\mathit{mut}}\bigl((\rho,(\sigma_L,\sigma_{NL})),\ k_{mr},\ k_{ir}\bigr)
+=
+\bigl(\rho,(\sigma_L,\sigma_{NL}[k_{ir} \mapsto \text{iref}(l)])\bigr)
+$$
+
+- ***Borrow a Mutable Reference Immutably***: This operation is similar to \(\mathsf{borrowImmut}_{\mathit{mut}}\), but it creates a new mutable reference that resides at a fresh location \(k'_{mr} \in \text{Loc}_{L}\).
+                                              If \(\sigma_{L}(k_{mr})=\text{mref}(l)\) and \(k'_{mr} \notin \mathrm{dom}(\sigma_{L})\) then the operation is:
+
+$$
+\mathsf{borrowMut}\bigl((\rho,(\sigma_L,\sigma_{NL})),\ k_{mr},\ k'_{mr}\bigr)
+=
+\bigl(\rho,(\sigma_L[k'_{mr} \mapsto \text{mref}(l)],\sigma_{NL})\bigr)
+$$
+
+TODO: ADD A WRITING OPERATION HERE THAT ONLY CHECKS IF THE MUTABLE REFERENCE IS REACHABLE FROM ENV OR NOT
+
+NEXT: THEN SOME DEFINE SOME WELL FORMED NESS CONDITIONS (MOVE THEM FROM THE PREVIOUS PART)
+NEXT: GIVE AN EXAMPLE AND THINGS THAT GO WRONG WITHOUT LIFETIME
+NEXT: THEN GO TO THE SECTION WHERE LIFETIMES ARE ADDED
+
+THE INTERMEDIATE STATE END
+
+---------------------------------------------------------------------------------------------------------------
+
 ## imem Memory
 
 imem extends linear memory with new kinds of references that make working with a well-formed memory more expressive than using pure linear values that follow linearity rules.
