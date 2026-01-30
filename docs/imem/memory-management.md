@@ -179,7 +179,7 @@ imem extends linear memory by introducing new kinds of references.
 To explain the imem memory model more clearly, the first part describes these additional references, how a program uses them, the expected well-formedness, and the need for lifetimes.
 Then, the section introduces lifetimes and explains their role in tracking the availability of the additional references.
 
-### imem Additional References
+### Memory With imem References
 
 The program state is the same as the linear program state:
 
@@ -215,13 +215,13 @@ $$
 
 An immutable reference \(\text{iref}(l)\) s similar to a mutable reference but provides read-only access to the location and is a nonlinear value.
 
-### Program Required Operations
+#### Program Required Operations
 
 To make these references practical, the program must be able to create references from one another and use them to access specific values in memory.
 The following list of operations models the features required by a program to create and use imem references.
 These operations are defined as functions that take a program state and additional arguments, and either validate that the requested operation is valid or return a new state that results from applying the operation to the memory state.
 
-### Operations on Boxes
+#### Operations on Boxes
 
 - ***Create a New Box***: The operation gets a location \(l\) and creates a box that points to \(l\). 
                           A fresh linear location \(k \in \text{Loc}_L\) points to the new box.
@@ -252,7 +252,7 @@ $$
 \bigl(\rho,(\sigma_L[k_{mr} \mapsto \text{mref}(l)],\sigma_{NL})\bigr)
 $$
 
-### Operations on Immutable References
+#### Operations on Immutable References
 
 - ***Borrow an Immutable Reference***: This operation re-borrows an immutable reference and creates a new immutable reference that points to the same location as the given immutable reference.
                                        The memory stores the new immutable reference at a fresh nonlinear location \(k_{ir} \in \text{Loc}_{NL}\).
@@ -264,9 +264,25 @@ $$
 \bigl(\rho,(\sigma_L,\sigma_{NL}[k'_{ir} \mapsto \text{iref}(l)])\bigr)
 $$
 
-TODO: ADD A READING OPERATION HERE THAT ONLY CHECKS IF THE IMMUTABLE REFERENCE IS REACHABLE FROM ENV OR NOT
+- ***Reading an Immutable Reference***: This operation accesses the resource of an immutable reference through that immutable reference.
+                                        It does not change the memory state. Instead, it only validates that the program's request to use this reference.
+                                        This access is valid as long as the immutable reference is reachable from the program environment.
+                                        The definition uses \(\text{Reachable}_{Ref}(\rho,\sigma)\), which the later subsection define.
+                                        Briefly, \(\text{Reachable}_{Ref}(\rho,\sigma)\) is the set of all boxes and references that the environment can reach.
+                                        Formally, if \(k_{ir} \in \mathrm{dom}(\sigma_{NL})\) and \(\sigma_{NL}(k_{ir})=\text{iref}(l)\), then:
 
-### Operations on Mutable References
+$$
+\mathsf{readImmut}\bigl((\rho,(\sigma_L,\sigma_{NL})),\ k_{ir}\bigr)
+=
+\begin{cases}
+(\rho,(\sigma_L,\sigma_{NL}))
+& \text{if }\text{iref}(l) \in \text{Reachable}_{Ref}(\rho,\sigma) \\[4pt]
+\mathsf{nonvalid}
+& \text{otherwise.}
+\end{cases}
+$$
+
+#### Operations on Mutable References
 
 - ***Borrow a Mutable Reference Mutably***: The operation \(\mathsf{borrowImmut}_{\mathit{mut}}\) gets a mutable reference and creates an immutable reference that points to the same location.
                                             The new immutable reference is stored at a fresh nonlinear location \(k_{ir} \in \text{Loc}_{NL}\).
@@ -287,36 +303,406 @@ $$
 \bigl(\rho,(\sigma_L[k'_{mr} \mapsto \text{mref}(l)],\sigma_{NL})\bigr)
 $$
 
-TODO: ADD A WRITING OPERATION HERE THAT ONLY CHECKS IF THE MUTABLE REFERENCE IS REACHABLE FROM ENV OR NOT
+- ***Writing a Mutable Reference***: Similar to reading an immutable reference, this operation does not change the memory state and only validates the program’s access to a mutable reference.
+                                     Also, similar to \( \mathsf{readImmut} \), the operation is valid if the mutable reference is reachable from the program environment.
+                                     Formally, if \(k_{mr} \in \mathrm{dom}(\sigma_{L})\) and \(\sigma_{L}(k_{mr})=\text{mref}(l)\), then:
 
-NEXT: THEN SOME DEFINE SOME WELL FORMED NESS CONDITIONS (MOVE THEM FROM THE PREVIOUS PART)
-NEXT: GIVE AN EXAMPLE AND THINGS THAT GO WRONG WITHOUT LIFETIME
-NEXT: THEN GO TO THE SECTION WHERE LIFETIMES ARE ADDED
+$$
+\mathsf{writeMut}\bigl((\rho,(\sigma_L,\sigma_{NL})),\ k_{mr}\bigr)
+=
+\begin{cases}
+(\rho,(\sigma_L,\sigma_{NL}))
+& \text{if }\text{mref}(l) \in \text{Reachable}_{Ref}(\rho,\sigma) \\[4pt]
+\mathsf{nonvalid}
+& \text{otherwise.}
+\end{cases}
+$$
 
-THE INTERMEDIATE STATE END
+#### An Example
+
+The following example demonstrates how a program can reach a simple memory state by using the defined operations.
+It also shows how certain uses of these operations can lead the memory state to an incorrect form.
+The example constructs a memory that contains two boxes: an outer box and an inner box.
+The outer box points to the inner box, and the inner box points to a nonlinear integer.
+
+Let \(k_{\mathsf{outer}}, k_{\mathsf{inner}} \in \text{Loc}_L\) and \(n_{42} \in \text{Loc}_{NL}\).
+Assume the initial nonlinear memory already contains the integer:
+
+$$
+(\rho_0,(\sigma_{L_0},\sigma_{NL_0}))
+=
+\bigl(\emptyset,\ (\emptyset,\ \{n_{42} \mapsto 42\})\bigr)
+$$
+
+First, the program creates a box that points to the nonlinear integer:
+
+$$
+(\rho_1,(\sigma_{L_1},\sigma_{NL_1}))
+=
+\mathsf{newBox}\bigl((\rho_0,(\sigma_{L_0},\sigma_{NL_0})),\ n_{42},\ k_{\mathsf{inner}}\bigr)
+$$
+
+Resulting in:
+
+$$
+\sigma_{L_1} = \{k_{\mathsf{inner}} \mapsto \text{box}(n_{42})\},
+\qquad
+\sigma_{NL_1} = \{n_{42} \mapsto 42\}
+$$
+
+Second, the program creates a second box that points to the inner box:
+
+$$
+(\rho_2,(\sigma_{L_2},\sigma_{NL_2}))
+=
+\mathsf{newBox}\bigl((\rho_1,(\sigma_{L_1},\sigma_{NL_1})),\ k_{\mathsf{inner}},\ k_{\mathsf{outer}}\bigr)
+$$
+
+Which results in:
+
+$$
+\sigma_{L_2} =
+\{
+k_{\mathsf{inner}} \mapsto \text{box}(n_{42}),
+\quad
+k_{\mathsf{outer}} \mapsto \text{box}(k_{\mathsf{inner}})
+\}
+\qquad
+\sigma_{NL_2} = \{n_{42} \mapsto 42\}
+$$
+
+Assume that the linear environment contains a variable \( \texttt{outer} \) that points to the outer box:
+
+$$
+\rho_{L_2} = \{\texttt{outer} \mapsto k_{\mathsf{outer}}\},
+\qquad
+\rho_{NL_2} = \emptyset
+$$
+
+Let \(k_{\mathsf{outerIr}} \in \text{Loc}_{NL}\) be fresh.
+In the next step, the program borrows the outer box immutably:
+
+$$
+(\rho_3,(\sigma_{L_3},\sigma_{NL_3}))
+=
+\mathsf{borrowImmutBox}\bigl((\rho_2,(\sigma_{L_2},\sigma_{NL_2})),\ k_{\mathsf{outer}},\ k_{\mathsf{outerIr}}\bigr)
+$$
+
+So:
+
+$$
+\sigma_{NL_3} =
+\{
+n_{42} \mapsto 42,
+\quad
+k_{\mathsf{outerIr}} \mapsto \text{iref}(k_{\mathsf{inner}})
+\}
+$$
+
+Assume that the nonlinear environment stores the borrowed reference in the variable \( \texttt{outerImm} \):
+
+$$
+\rho_{NL_3} = \{\texttt{outerImm} \mapsto k_{\mathsf{outerIr}}\}
+$$
+
+Next, the program accesses the \( \texttt{outerImm} \) reference using \( \mathsf{readImmut} \).
+This operation is valid if \( \text{iref}(k_{\mathsf{inner}}) \) is reachable from the environment.
+
+$$
+\mathsf{readImmut}\bigl((\rho_3,(\sigma_{L_3},\sigma_{NL_3})),\ k_{\mathsf{outerIr}}\bigr)
+=
+(\rho_3,(\sigma_{L_3},\sigma_{NL_3}))
+$$
+
+To illustrate that this operation can produce a memory state that appears incorrect, the following presents two cases in which the operation result contains faults.
+The later well-formedness definition rules out these incorrect states.
+
+Let \(k'_{\mathsf{outer}} \in \text{Loc}_L\) be fresh.
+The program can create a second box that also points to \(k_{\mathsf{inner}}\):
+
+$$
+(\rho_4,(\sigma_{L_4},\sigma_{NL_4}))
+=
+\mathsf{newBox}\bigl((\rho_3,(\sigma_{L_3},\sigma_{NL_3})),\ k_{\mathsf{inner}},\ k'_{\mathsf{outer}}\bigr)
+$$
+
+Resulting in:
+
+$$
+\sigma_{L_4} =
+\{
+k_{\mathsf{inner}} \mapsto \text{box}(n_{42}),
+\quad
+k_{\mathsf{outer}} \mapsto \text{box}(k_{\mathsf{inner}}),
+\quad
+k'_{\mathsf{outer}} \mapsto \text{box}(k_{\mathsf{inner}})
+\}
+\qquad
+\sigma_{NL_4} =
+\{
+n_{42} \mapsto 42,
+\quad
+k_{\mathsf{outerIr}} \mapsto \text{iref}(k_{\mathsf{inner}})
+\}
+$$
+
+In this state, two boxes point to the same inner box location \(k_{\mathsf{inner}}\).
+This is not aligned with the linear tree memory structure that imem tries to preserve through the boxes.
+The later well-formedness definition rules out this state.
+
+In addition, the program can borrow the inner box mutably while the immutable reference to the outer box remains reachable.
+Let \(k_{\mathsf{innerMr}} \in \text{Loc}_{L}\) be fresh.
+Given the third memory state, \( (\rho_5, (\sigma_{L_5}, \sigma_{NL_5})) \), as input, the program can borrow the inner box mutably:
+
+$$
+(\rho_5,(\sigma_{L_5},\sigma_{NL_5}))
+=
+\mathsf{borrowMutBox}\bigl((\rho_3,(\sigma_{L_3},\sigma_{NL_3})),\ k_{\mathsf{inner}},\ k_{\mathsf{innerMr}}\bigr)
+$$
+
+Resulting in:
+
+$$
+\sigma_{L_5} =
+\{
+k_{\mathsf{inner}} \mapsto \text{box}(n_{42}),
+\quad
+k_{\mathsf{outer}} \mapsto \text{box}(k_{\mathsf{inner}}),
+\quad
+k_{\mathsf{innerMr}} \mapsto \text{mref}(n_{42})
+\}
+\qquad
+\sigma_{NL_5} =
+\{
+n_{42} \mapsto 42,
+\quad
+k_{\mathsf{outerIr}} \mapsto \text{iref}(k_{\mathsf{inner}})
+\}
+$$
+
+In this state, the program can access the immutable reference \(\texttt{outerImm}\), and it can also access the mutable reference \( \text{mref}(n_{42}) \).
+This combination is not acceptable because the mutable reference can update the resource that the immutable reference can reach.
+The later well-formedness definition rules out this situation.
+
+#### Well-formedness
+
+##### Additional Definitions
+
+***References Mentioned in a Value:***
+The references that appear in a value \(v\), denoted \(\text{Refs}(v)\), are defined as follows:
+
+$$
+\text{Refs}(v) =
+\begin{cases}
+\{\, v_i \mid v = \langle v_1, \dots, v_k \rangle
+\;\wedge\; v_i \in \text{Loc}_L \cup \text{Loc}_{NL} \,\}
+& \\[4pt]
+\{l\}
+& \text{if } v \in \{\text{box}(l),\ \text{iref}(l),\ \text{mref}(l)\} \\[4pt]
+\emptyset
+& \text{otherwise.}
+\end{cases}
+$$
+
+***Resource:***
+A resource is a location that has an imem \(\text{box}\) reference pointing to it:
+
+$$
+l \in \text{Res}(\sigma)
+\iff
+\exists k \in \mathrm{dom}(\sigma_L).\ \sigma_L(k)=\text{box}(l)
+$$
+
+***Reachability:***
+The domain of the full memory is:
+
+$$
+\mathrm{dom}(\sigma)=\mathrm{dom}(\sigma_L)\ \cup\ \mathrm{dom}(\sigma_{NL})
+$$
+
+For any \(k \in \mathrm{dom}(\sigma)\), \(\sigma(k)\) denotes \(\sigma_L(k)\) if \(k \in \mathrm{dom}(\sigma_L)\), and \(\sigma_{NL}(k)\) if \(k \in \mathrm{dom}(\sigma_{NL})\).
+
+A location \(l\) reaches another location \(l'\) in one step if and only if:
+
+$$
+l \to l'
+\iff
+l \in \mathrm{dom}(\sigma)\ \wedge\ l' \in \text{Refs}(\sigma(l))
+$$
+
+A location \(l\) reaches a location \(l'\) if and only if:
+
+$$
+l \to^{*} l'
+\iff
+\exists n \ge 1,\ \exists l_0,\dots,l_n\ \text{such that}\
+l_0 = l\ \wedge\ l_n = l'\ \wedge\
+\forall i \in \{0,\dots,n-1\}.\ l_i \to l_{i+1}
+$$
+
+A location \(l\) is reachable from a linear variable \(x \in \mathrm{dom}(\rho_L)\) iff:
+
+$$
+x \rightsquigarrow l \iff \rho_L(x) \to^{*} l
+$$
+
+A reaching path \(\pi \in \text{Paths}(x,l)\) from variable \(x\) to location \(l\) is a finite sequence of locations \((l_1,\dots,l_n)\) such that:
+
+- \(l_1 = \rho_L(x)\),
+- \(l_n = l\),
+- and \(l_i \to l_{i+1}\) for all \(1 \le i < n\).
+
+***Reachable References:***
+The set of reachable references, \(\text{Reachable}_{Ref}\), contains every box, immutable reference, and mutable reference that is stored at a location reachable from a linear environment variable.
+In addition, \(\text{Reachable}_{Ref}\) contains every immutable reference stored at a location that a nonlinear environment variable points to.
+
+$$
+\begin{aligned}
+\text{Reachable}_{Ref}(\rho,\sigma)
+=
+&\ \{\, r
+\mid
+\exists x \in \mathrm{dom}(\rho_L).\ \exists k \in \mathrm{dom}(\sigma).\
+x \rightsquigarrow k
+\ \wedge\
+\sigma(k)=r
+\ \wedge\
+r \in \{\text{box}(\_),\ \text{iref}(\_),\ \text{mref}(\_)\}
+\,\} \\
+&\ \cup\
+\{\, r
+\mid
+\exists y \in \mathrm{dom}(\rho_{NL}).\ \exists k \in \mathrm{dom}(\sigma_{NL}).\
+\rho_{NL}(y)=k
+\ \wedge\
+\sigma_{NL}(k)=r
+\ \wedge\
+r \in \{\text{iref}(\_)\}
+\,\}.
+\end{aligned}
+$$
+
+***Direct Boxes:***
+The set of direct boxes of a location \(l\) is called \(D(l)\).
+It contains all linear locations that store a box that points to \(l\):
+
+$$
+D(l,\sigma) = \{\, k \in \mathrm{dom}(\sigma_L) \mid \sigma_L(k)=\text{box}(l)\,\}
+$$
+
+##### Properties
+
+An imem memory state \((\rho,\sigma)\) is well formed if it satisfies the following properties.
+As indicated by the formal definitions of these properties, well-formedness mainly concerns about the portion of memory that is reachable from the environment.
+
+***Direct Box Uniqueness:***
+Every linear location \(l \in \text{Loc}_{L} \) has at most one reachable direct box that points to \(l\).
+In other words, every linear location is either:
+
+- Is not reachable from environment.
+- Or exactly one linear composite value stores it.
+- Or exactly one reachable box points to it.
+
+Formally:
+
+$$
+\forall l \in \text{Loc}_{L}.\
+\Rightarrow
+\left|
+\left\{
+k \in D(l,\sigma)
+\ \middle|\ 
+\sigma_L(k) \in \text{Reachable}_{Ref}
+\right\}
+\right|
+\leq 1
+$$
+
+***No Cyclic Box:***
+A box \(b = \text{box}(l)\) must not reach itself through dereferencing:
+
+$$
+\neg \exists k \in \mathrm{dom}(\sigma).\
+\bigl(\sigma(k)=\text{box}(l)\bigr)\ \wedge\ \bigl(l \to^{*} k\bigr)
+$$
+
+***Borrowing Validity:***
+For every mutable or immutable reference that is reachable in memory, there exists a reachable box that points to the same location.
+
+Formally:
+
+$$
+\forall k \in \mathrm{dom}(\sigma_L).\ \forall l.\
+\Bigl(
+\sigma_L(k)=\text{mref}(l) \in \text{Reachable}_{Ref}
+\Bigr)
+\Rightarrow
+\Bigl(
+\exists k_b \in \mathrm{dom}(\sigma_L).\ \sigma_L(k_b)=\text{box}(l) \in \text{Reachable}_{Ref}
+\Bigr)
+$$
+
+$$
+\forall k \in \mathrm{dom}(\sigma_{NL}).\ \forall l.\
+\Bigl(
+\sigma_{NL}(k)=\text{iref}(l) \in \text{Reachable}_{Ref}
+\Bigr)
+\Rightarrow
+\Bigl(
+\exists k_b \in \mathrm{dom}(\sigma_L).\ \sigma_L(k_b)=\text{box}(l) \in \text{Reachable}_{Ref}
+\Bigr)
+$$
+
+This property means that every immutable and mutable reference is borrowed from a box that points to the same location.
+
+***Immutable Reference Not Reaching Mutable Reference:***
+A reachable immutable reference \(ir = \text{iref}(l_i)\) should not reach a location that a reachable mutable reference points to:
+
+$$
+\forall l_i, l_m.\
+\Bigl(
+\text{iref}(l_i) \in \text{Reachable}_{Ref}(\rho,\sigma)
+\ \wedge\
+\text{mref}(l_m) \in \text{Reachable}_{Ref}(\rho,\sigma)
+\Bigr)
+\Rightarrow
+\neg (l_i \to^{*} l_m)
+$$
+
+This property results in immutable references reaching a constant portion of memory as long as they remain reachable.
+
+#### Example Cont.
 
 ---------------------------------------------------------------------------------------------------------------
 
-## imem Memory
+TODO: CONTINUATION OF THE EXAMPLE BUT SHOW THAT THE NOT WANTED OPERATIONS NOW MAKE THE MEMORY NOT WELL-FORMED AND IT'S OK
 
-imem extends linear memory with new kinds of references that make working with a well-formed memory more expressive than using pure linear values that follow linearity rules.
-To ensure the safety of well-formed memories and to enable static memory management, imem introduces lifetimes.
+---------------------------------------------------------------------------------------------------------------
 
-### Definition by Extending Linear Memory
+#### Well-formed But Not Correct
 
-imem introduces lifetimes to track the availability of a location, expressed as the associated lifetime availability.
-A lifetime is an entity that becomes available at some point during execution and expires later.  
-The set of all lifetimes is \(\mathcal{L}\).
+---------------------------------------------------------------------------------------------------------------
 
-imem extends the memory state by recording which lifetimes are currently available:
+TODO: AN MIMAL EXAMPLE WHERE THE PROGRAM HAS TWO MUTABLE REFERENCE TO THE SAME RESOURCE, ONE TIME IT WRITE THE FIRST AND THEN THE SECOND AND ITS OK, BUT IF IT AGAIN WRITE THE FIRST ONE IT IS WRONG AND THAT IS WHERE LIFETIMES ARE NEEDED
+
+---------------------------------------------------------------------------------------------------------------
+
+### Memory with imem References And Lifetimes
+
+To address the discussed issues, imem must relate the availability of some references to the unavailability of other references.
+For example, borrowing a box mutably should invalidate all immutable references that are borrowed from the same box.
+To achieve this, imem introduces lifetimes and a new type of reference, called a value holder, and augments existing references with lifetime sets.  
+In addition, lifetimes enable static memory management.
+
+A lifetime is an entity that becomes available once during program execution and then expires.
+The memory state tracks the lifetimes that are currently available:
 
 $$
 (\rho, \sigma, \Lambda)
 $$
 
 Where $\Lambda \subseteq \mathcal{L}$ is the set of available lifetimes.
-
-imem extends the set of linear values by introducing three kinds of references:
+The set of linear values is:
 
 $$
 \begin{aligned}
@@ -328,13 +714,12 @@ $$
 \end{aligned}
 $$
 
-These new linear references are:
+Box and mutable references are augmented with a lifetime set \(\tau\).
+A reference is available as long as all lifetimes in its associated set have not expired.
+In addition, \(\text{Val}_L\) now includes a new reference \(\text{hold}(l, \alpha)\), called a value holder, which prevents access to location \(l\) until lifetime \(\alpha\) expires.
 
-- A \(\text{box}(l, \tau)\) is a general reference that the program can borrow immutable and mutable references from.
-- \(\text{mref}(l, \tau)\) is a mutable reference, which provides read-write access to location \(l\).
-- \(\text{hold}(l, \alpha)\) is a value holder, which prevents access to location \(l\) until lifetime \(\alpha\) expires.
-
-In addition, imem extends nonlinear values by adding immutable references:
+Furthermore, immutable references are also augmented with a lifetime set.
+As a result, the set of nonlinear values takes the following form:
 
 $$
 \begin{aligned}
@@ -344,23 +729,30 @@ $$
 \end{aligned}
 $$
 
-An immutable reference \(\text{iref}(l, \tau)\) is similar to a mutable reference but provides read-only access to the location and is a nonlinear value.
+#### New and Changed Program Needed Operations
 
-### Well-formedness
+---------------------------------------------------------------------------------------------------------------
 
-#### Additional Definitions
+The introduction of lifetimes adds two new operations: \(\mathsf{addLifetime}\) and \(\mathsf{removeLifetime}\).
+TODO: MATHEMATICAL AND EXPLAINATION OF ADDLIFETIME AND REMOVELIFETIME
 
-***Availability of References:***
-imem associates a set of lifetimes \(\tau \subseteq \mathcal{L}\) with the references \(\text{box}(l, \tau)\), \(\text{mref}(l, \tau)\), and \(\text{iref}(l, \tau)\).  
-If any lifetime in \(\tau\) expires, the reference becomes unavailable.
-Formally, a value \(v \in \{ \text{box}(l, \tau), \text{mref}(l, \tau), \text{iref}(l, \tau) \}\) is available iff:
+TODO: MAKE THE FOLLOWING CHANGES TO THE OPERATIONS:
+- BORROWING OPERATIONS ARE VALID AS LONG AS THE BORROWING REFERENCE PATH TO ENVIRONMENT DOES NOT ENCOUNTER ANY VALUE HOLDERS THAT THE LIFETIME IS NOT EXPIRED
+- THE BORROW OPERATIONS CREATE VALUE HOLDERS FOR THE BORROWED
+- THE LIFETIME SET OF BORROWED REFERENCES IS MONOTONE MEANING A SUPERSET OF ALL REFERENCES REACHING IT.
 
-$$
-\text{Avail}(v, \Lambda) \iff \tau \subseteq \Lambda
-$$
+---------------------------------------------------------------------------------------------------------------
 
-***References Mentioned in a Value:***
-The references that appear in a value \(v\), denoted \(\text{Refs}(v)\), are defined as follows:
+These operations ensure that the memory remains well formed, as formally defined in the following subsections.
+
+#### Well-formedness
+
+Similar to the previous version, memory well-formedness concerns only the part that is reachable from the environment and, in addition, available along the entire path from the environment to the location.
+
+##### Additional Definitions
+
+The *Resource*, *Reachability*, and *Direct Boxes* definitions remain the same.  
+The definition of *References Mentioned in a Value* changes slightly by adding value holder references:
 
 $$
 \text{Refs}(v) =
@@ -375,36 +767,16 @@ $$
 \end{cases}
 $$
 
-***Resource:***
-A resource is a location that has an imem \(\text{box}\) reference pointing to it.
+The following presents the new definitions.
+
+***Availability of References:***
+imem associates a set of lifetimes \(\tau \subseteq \mathcal{L}\) with the references \(\text{box}(l, \tau)\), \(\text{mref}(l, \tau)\), and \(\text{iref}(l, \tau)\).  
+If any lifetime in \(\tau\) expires, the reference becomes unavailable.
+Formally, a value \(v \in \{ \text{box}(l, \tau), \text{mref}(l, \tau), \text{iref}(l, \tau) \}\) is available iff:
 
 $$
-l \in \text{Res}(\sigma) \iff \exists \tau \subseteq \mathcal{L} \text{ s.t. } \text{box}(l, \tau) \in \text{Val}_L
+\text{Avail}(v, \Lambda) \iff \tau \subseteq \Lambda
 $$
-
-***Reachability:***
-A location \(l\) reaches another location \(l'\) in one step if and only if:
-
-$$
-l \to l' \iff l \in \mathrm{dom}(\sigma) \ \wedge\ l' \in \text{Refs}(\sigma(l))
-$$
-
-A location \(l\) reaches a location \(l'\) if and only if:
-
-$$
-l \to^{*} l' \;\;\iff\;\; \exists n \ge 1,\ \exists l_1, \dots, l_n \;\text{such that}\;
-l_0 = l \;\wedge\; l_n = l' \;\wedge\; \forall i \in \{1,\dots,n-1\},\; l_i \to l_{i+1}.
-$$
-
-A location \(l\) is reachable from a linear variable \(x \in \mathrm{dom}(\rho_L)\) iff:
-
-\(x \rightsquigarrow l \iff \rho_L(x) \to^{*} l\)
-
-A reaching path \(\pi \in  \text{Paths}(x,l)\) from variable \(x\) to location \(l\) is a finite sequence of locations \((l_1, \dots, l_n)\) such that:
-
-- \(l_1 = \rho_L(x)\),
-- \(l_n = l\),
-- and \(l_i \to l_{i+1}\) for all \(1 \le i < n\).
 
 ***Available Linear Environment:***
 The set of available linear variables, $\text{Var}_{Avail}$, consists of all linear variables in $\rho_L$ for which all references they reach are available:
@@ -421,18 +793,22 @@ $$
 \text{RefsReach}(x,\rho,\sigma) = \{\, r \mid \exists k.\ x \rightsquigarrow k\ \wedge\ \sigma(k)=r\ \wedge\ r \in \{\text{box}(\_,\_),\text{ref}(\_,\_),\text{mref}(\_,\_)\} \,\}
 $$
 
-***Available reachable boxes:***
-The set of available reachable boxes, $\text{Box}_{AR}$, is:
+***Available Reachable References:***
+The set of available reachable references, \(\text{AR}_{Ref}\), contains every available box, immutable reference, and mutable reference that is stored at a location reachable from an available linear environment variable:
 
 $$
-\text{Box}_{AR}(\rho,\sigma,\Lambda) = \{\, b \in \text{Boxes}(\sigma) \mid \exists x \in \text{Var}_{\mathit{Avail}}(\rho,\sigma,\Lambda).\ \exists k.\ x \rightsquigarrow k \wedge \sigma(k)=b \,\}
-$$
-
-***Direct Boxes:***
-The set of direct boxes of a location $l$ is called $D(l)$, which consists of all boxes in the memory that point to $l$.
-
-$$
-D(l) = \{ b \in \text{Val}_L \mid \exists \tau, b = \text{box}(l, \tau) \}
+\begin{aligned}
+\text{AR}_{Ref}(\rho,\sigma,\Lambda)
+=
+\{\, r \mid\ &
+\exists x \in \text{Var}_{\mathit{Avail}}(\rho,\sigma,\Lambda).\
+\exists k \in \mathrm{dom}(\sigma).\
+x \rightsquigarrow k
+\ \wedge\ \sigma(k)=r \\
+&\wedge\ r \in \{\text{box}(\_,\_),\ \text{iref}(\_,\_),\ \text{mref}(\_,\_)\}
+\ \wedge\ \text{Avail}(r,\Lambda)
+\,\}.
+\end{aligned}
 $$
 
 ***Access Expiration:***
@@ -458,19 +834,14 @@ $$
 An imem memory state $(\rho, \sigma, \Lambda)$ is well-formed if it satisfies the following properties.
 
 ***Direct Box Uniqueness:***
-Every linear location \(l \in \text{Loc}_{L}\) for which there exists an available linear variable $x \in \text{Var}_{\mathit{Avail}}$ that \(x \rightsquigarrow l\) has exactly one reachable direct box.
-Formally:
+Every linear location \(l \in \text{Loc}_{L} \) has at most one reachable available direct box that points to \(l\):
 
 $$
-|D(l,\sigma) \cap \text{Box}_{AR}(\rho,\sigma,\Lambda)| = 1
+|D(l,\sigma) \cap \text{Box}_{AR}(\rho,\sigma,\Lambda)| \leq 1
 $$
 
 ***No cyclic box***:
-A box $b = \text{box}(l, \tau)$ must not reach itself through dereferencing:
-
-$$
-\neg \exists k \in \mathrm{dom}(\sigma).\ \sigma(k)=b \ \wedge\ l \to^{*} k
-$$
+The same as previous definition.
 
 ***No dangling references:***
 For any two references \(r_1 \in \{\text{box}(l_1, \tau_1), \text{iref}(l_1, \tau_1), \text{mref}(l_1, \tau_1)\}\) and  \(r_2 \in \{\text{box}(l_2, \tau_2), \text{iref}(l_2, \tau_2), \text{mref}(l_2, \tau_2)\}\), and for any location \(k\) such that \(\sigma(k) = r_2\), if \(l_1\) reaches \(k\) and \(r_2\) becomes unavailable, then \(r_1\) also becomes unavailable.
@@ -514,22 +885,21 @@ Accessing a box expires all references borrowed from it, as well as references b
 Accessing a mutable reference expires all mutable and immutable references borrowed from it or borrowed from its reachable boxes.
 
 ***Immutable Reference not reaching Mutable Reference:***
-An available immutable reference $ir = \text{iref}(l_i, \tau_i)$  should not reach a location that an available mutable reference points to:
+An available reachable immutable reference $ir = \text{iref}(l_i, \tau_i)$  should not reach a location that an available reachable mutable reference points to:
 
 $$
 \forall ir, mr.\ 
 \Bigl(
-\text{Avail}(ir,\Lambda) \wedge \text{Avail}(mr,\Lambda)
+ir \in \text{AR}_{Ref}(\rho,\sigma,\Lambda) \wedge mr \in \text{AR}_{Ref}(\rho,\sigma,\Lambda)
 \wedge ir=\text{iref}(l_i,\tau_i) \wedge mr=\text{mref}(l_m,\tau_m)
 \Bigr)
 \implies
 \neg (l_i \to^{*} l_m)
 $$
 
-This property results in immutable references reaching a constant portion of memory as long as they remain available.
-
 ### Overview
 
+An imem memory is a linear memory extended with [additional references](#memory-with-imem-references) and [lifetimes](#memory-with-imem-references-and-lifetimes), with a specific definition of [well-formedness](#well-formedness-2).
 In a well-formed imem memory, the structure formed by connecting all available boxes to the values stored at the locations they point to is a tree.
 This structure arises because the *Direct Box Uniqueness* property guarantees that each value is pointed to by exactly one box, and the *No Cyclic Box* property prevents boxes from forming cycles.
 As a result, this structure closely resembles the tree of linear values in a well-formed linear memory.
@@ -670,25 +1040,6 @@ Similarly, accessing the mutable reference passes through the hold at location \
 
 TODO: A DIAGRAM THAT THE LIST IN IMEM WITH THE REFERENCES
 
-<!--
-
-TODO: CHECK WHICH PARTS OF THE CONTENT MATCHES AND CHECK IF THE DIAGRAM IS STILL USABLE OR NOT
-
-If a program follows imem’s static rules, it cannot mutably borrow a box that lies within the reachable nodes of another box that is already immutably borrowed.
-This restriction applies when one box can access another box by dereferencing the box to its resource.
-The [borrow checking](./borrow-checking.md) and [ownership](./ownership.md) sections describe this rule and its implications in more detail.
-When the program follows imem static rules, the resulting object graph has the structure as follows:
-
-![Imem Memory Overview with Static Rules](../img/imem-memory-overview.png){: width="450"}
-
-Another difference in the memory layout, when static rules are followed, is that some boxes and references are stored inside linear values rather than directly in variables within the execution scope.
-These linear values are called `ValueHolder`s.
-As the diagram illustrates, each connected component has exactly one box, one mutable reference, or multiple immutable references directly accessible through variables in the current scope.
-When the program unlocks a `ValueHolder`, imem invalidates the previous access point by making the old variable unavailable and then stores the new access point, which may be a box or a reference, in a fresh variable.
-The [borrow checking](./borrow-checking.md) section explains this mechanism in more detail.
--->
-
-
 ### Memory Management
 
 In a well-formed imem memory, it is safe to free a location that points to an unavailable box, as well as the location that the unavailable box points to, if no available direct box still points to that location.
@@ -706,4 +1057,3 @@ In this way, all memory regions reachable through references are managed safely 
 The Scala library imem enforces static rules to ensure that the part of program memory it manages remains well formed throughout execution.  
 These static rules include [ownership](./ownership.md) rules and [borrow-checking](./borrow-checking.md) rules.
 Because Scala provides many features that may interfere with these rules, the [soundness](./soundness.md) section presents guidelines that a program must follow to keep its memory well formed.
-
