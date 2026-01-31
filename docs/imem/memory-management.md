@@ -170,9 +170,6 @@ TODO: AN EXAMPLE OF `@HiderLinearity` CREATING CYCLIC DATA STRUCTURES
 
 imem uses `@HideLinearity` to provide a more expressive approach while still performing safe memory management statically.
 
----------------------------------------------------------------------------------------------------------------
-THE INTERMEDIATE STATE BEGIN
-
 ## imem memory
 
 imem extends linear memory by introducing new kinds of references.
@@ -673,23 +670,124 @@ This property results in immutable references reaching a constant portion of mem
 
 #### Example Cont.
 
----------------------------------------------------------------------------------------------------------------
+The [previous example](#an-example-1) produces two memory states that are not well formed.
+In the fourth state \((\rho_4,(\sigma_{L_4},\sigma_{NL_4}))\), the location \(k_{\mathsf{inner}}\) has two direct boxes, stored at \(k_{\mathsf{outer}}\) and \(k'_{\mathsf{outer}}\).
+This violates ***Direct Box Uniqueness*** because \(D(k_{\mathsf{inner}},\sigma_{L_4})\) contains two reachable direct boxes.
 
-TODO: CONTINUATION OF THE EXAMPLE BUT SHOW THAT THE NOT WANTED OPERATIONS NOW MAKE THE MEMORY NOT WELL-FORMED AND IT'S OK
-
----------------------------------------------------------------------------------------------------------------
+In the fifth state \((\rho_5,(\sigma_{L_5},\sigma_{NL_5}))\), the immutable reference \(\texttt{outerImm}\) is \(\text{iref}(k_{\mathsf{inner}})\), and the mutable reference is \(\text{mref}(n_{42})\).
+This violates ***Immutable Reference Not Reaching Mutable Reference*** because \(k_{\mathsf{inner}} \to^{*} n_{42}\).
 
 #### Well-formed But Not Correct
 
----------------------------------------------------------------------------------------------------------------
+The following example shows that the current definition is not sufficient.
+The example produces a memory state that satisfies the well-formedness properties, yet it still permits an incorrect access pattern. This observation motivates the addition of lifetimes and value holders to imem.
 
-TODO: AN MIMAL EXAMPLE WHERE THE PROGRAM HAS TWO MUTABLE REFERENCE TO THE SAME RESOURCE, ONE TIME IT WRITE THE FIRST AND THEN THE SECOND AND ITS OK, BUT IF IT AGAIN WRITE THE FIRST ONE IT IS WRONG AND THAT IS WHERE LIFETIMES ARE NEEDED
+Let \(k_b, k_{\mathsf{mr_1}}, k_{\mathsf{mr_2}} \in \text{Loc}_L\) and \(n_{42} \in \text{Loc}_{NL}\).
+The initial memory state is just an integer:
 
----------------------------------------------------------------------------------------------------------------
+$$
+(\rho_0,(\sigma_{L_0},\sigma_{NL_0}))
+=
+\bigl(\emptyset,\ (\emptyset,\ \{n_{42} \mapsto 42\})\bigr)
+$$
+
+The program starts by creating a box that points to the nonlinear integer:
+
+$$
+(\rho_1,(\sigma_{L_1},\sigma_{NL_1}))
+=
+\mathsf{newBox}\bigl((\rho_0,(\sigma_{L_0},\sigma_{NL_0})),\ n_{42},\ k_b\bigr)
+$$
+
+Also, let the linear environment contains a variable \(\texttt{b}\) that points to the box:
+
+$$
+\rho_{L_1} = \{\texttt{b} \mapsto k_b\},
+\qquad
+\rho_{NL_1} = \emptyset
+$$
+
+Then, the program mutably borrows the box.
+Let \(k_{\mathsf{mr_1}}\) be fresh:
+
+$$
+(\rho_2,(\sigma_{L_2},\sigma_{NL_2}))
+=
+\mathsf{borrowMutBox}\bigl((\rho_1,(\sigma_{L_1},\sigma_{NL_1})),\ k_b,\ k_{\mathsf{mr_1}}\bigr)
+$$
+
+And the linear environment stores this mutable reference in \(\texttt{mr}_1\):
+
+$$
+\rho_{L_2} =
+\{
+\texttt{b} \mapsto k_b,
+\quad
+\texttt{mr}_1 \mapsto k_{\mathsf{mr_1}}
+\}
+$$
+
+After that, the program mutably borrows the mutable reference.
+Let \(k_{\mathsf{mr_2}}\) be fresh:
+
+$$
+(\rho_3,(\sigma_{L_3},\sigma_{NL_3}))
+=
+\mathsf{borrowMut}\bigl((\rho_2,(\sigma_{L_2},\sigma_{NL_2})),\ k_{\mathsf{mr_1}},\ k_{\mathsf{mr_2}}\bigr)
+$$
+
+Assume that the linear environment stores the second mutable reference in \(\texttt{mr}_2\):
+
+$$
+\rho_{L_3} =
+\{
+\texttt{b} \mapsto k_b,
+\quad
+\texttt{mr}_1 \mapsto k_{\mathsf{mr_1}},
+\quad
+\texttt{mr}_2 \mapsto k_{\mathsf{mr_2}}
+\}
+$$
+
+At this point, the linear memory contains two mutable references that point to the same location \(n_{42}\):
+
+$$
+\sigma_{L_3} =
+\{
+k_b \mapsto \text{box}(n_{42}),
+\quad
+k_{\mathsf{mr_1}} \mapsto \text{mref}(n_{42}),
+\quad
+k_{\mathsf{mr_2}} \mapsto \text{mref}(n_{42})
+\}
+\qquad
+\sigma_{NL_3} = \{n_{42} \mapsto 42\}
+$$
+
+Now, the program writes through \(\texttt{mr}_1\) by using \(\mathsf{writeMut}\).
+This operation succeeds because \(\text{mref}(n_{42})\) is reachable from the environment:
+
+$$
+\mathsf{writeMut}\bigl((\rho_3,(\sigma_{L_3},\sigma_{NL_3})),\ k_{\mathsf{mr_1}}\bigr)
+=
+(\rho_3,(\sigma_{L_3},\sigma_{NL_3}))
+$$
+
+After that, the program also writes through \(\texttt{mr}_2\).
+This operation also succeeds for the same reason:
+
+$$
+\mathsf{writeMut}\bigl((\rho_3,(\sigma_{L_3},\sigma_{NL_3})),\ k_{\mathsf{mr_2}}\bigr)
+=
+(\rho_3,(\sigma_{L_3},\sigma_{NL_3}))
+$$
+
+This behavior is not aligned with the [Stacked Borrows Model](../background/stacked-borrows.md) because a mutable reference derived from another mutable reference should not remain usable after the first mutable reference is accessed for writing.
+To fix this, imem adds a mechanism to expire \(\texttt{mr}_2\) after writing to \(\texttt{mr}_1\).
 
 ### Memory with imem References And Lifetimes
 
-To address the discussed issues, imem must relate the availability of some references to the unavailability of other references.
+To address the [discussed issues](#well-formed-but-not-correct), imem must relate the availability of some references to the unavailability of other references.
 For example, borrowing a box mutably should invalidate all immutable references that are borrowed from the same box.
 To achieve this, imem introduces lifetimes and a new type of reference, called a value holder, and augments existing references with lifetime sets.  
 In addition, lifetimes enable static memory management.
@@ -731,19 +829,162 @@ $$
 
 #### New and Changed Program Needed Operations
 
----------------------------------------------------------------------------------------------------------------
+The following operations update the previous definitions accordingly.
 
-The introduction of lifetimes adds two new operations: \(\mathsf{addLifetime}\) and \(\mathsf{removeLifetime}\).
-TODO: MATHEMATICAL AND EXPLAINATION OF ADDLIFETIME AND REMOVELIFETIME
+#### Operations on Boxes
 
-TODO: MAKE THE FOLLOWING CHANGES TO THE OPERATIONS:
-- BORROWING OPERATIONS ARE VALID AS LONG AS THE BORROWING REFERENCE PATH TO ENVIRONMENT DOES NOT ENCOUNTER ANY VALUE HOLDERS THAT THE LIFETIME IS NOT EXPIRED
-- THE BORROW OPERATIONS CREATE VALUE HOLDERS FOR THE BORROWED
-- THE LIFETIME SET OF BORROWED REFERENCES IS MONOTONE MEANING A SUPERSET OF ALL REFERENCES REACHING IT.
+- ***Create a New Box***: The operation gets a location \(l\) and a lifetime set \(\tau\), and it creates a box \(\text{box}(l,\tau)\).
+  A fresh linear location \(k \in \text{Loc}_L\) points to the new box:
 
----------------------------------------------------------------------------------------------------------------
+$$
+\mathsf{newBox}\bigl((\rho,(\sigma_L,\sigma_{NL}),\Lambda),\ l,\ \tau,\ k\bigr)
+=
+\bigl(\rho,(\sigma_L[k \mapsto \text{box}(l,\tau)],\sigma_{NL}),\Lambda\bigr)
+$$
 
-These operations ensure that the memory remains well formed, as formally defined in the following subsections.
+- ***Borrow a Box Immutably***: The operation \(\mathsf{borrowImmutBox}\) gets a linear variable \(x_b\) that points to a box, a new reference lifetime set \(\tau_{ir}\), and a value holder lifetime \(\alpha \in \tau_{ir}\).
+  It borrows the box by removing \(x_b\) from the linear environment.
+  Then, it adds a fresh linear variable \(x_h\) that points to a fresh location \(k_h\) that stores a value holder \(\text{hold}(k_b,\alpha)\).
+  This value holder points to the original box location \(k_b\).
+  Finally, the operation creates an immutable reference \(\text{iref}(l,\tau_{ir})\) that points to the same location \(l\), and it stores this reference at a fresh nonlinear location \(k_{ir}\).
+
+  Formally, if \(x_b \in \mathrm{dom}(\rho_L)\), \(\rho_L(x_b)=k_b\), \(\sigma_L(k_b)=\text{box}(l,\tau_b)\), and there exist \(x_h, k_h, k_{ir}\) such that \(x_h \notin \mathrm{dom}(\rho_L)\), \(k_h \notin \mathrm{dom}(\sigma_L)\), and \(k_{ir} \notin \mathrm{dom}(\sigma_{NL})\), then:
+
+$$
+\mathsf{borrowImmutBox}\bigl((\rho,(\sigma_L,\sigma_{NL}),\Lambda),\ x_b,\ \tau_{ir},\ \alpha\bigr)
+=
+\bigl(
+(\rho_L \setminus \{x_b\}) \cup \{x_h \mapsto k_h\}\ \cup\ \rho_{NL},\ 
+(\sigma_L[k_h \mapsto \text{hold}(k_b,\alpha)],\ \sigma_{NL}[k_{ir} \mapsto \text{iref}(l,\tau_{ir})]),\
+\Lambda
+\bigr)
+$$
+
+- ***Borrow a Box Mutably***: The operation \(\mathsf{borrowMutBox}\) is similar to \(\mathsf{borrowImmutBox}\), but it creates a mutable reference \(\text{mref}(l,\tau_{mr})\) with a new lifetime set \(\tau_{mr}\).
+  The operation \(\mathsf{borrowMutBox}\) gets a linear variable \(x_b\) that points to a box, a new reference lifetime set \(\tau_{mr}\), and a value holder lifetime \(\alpha \in \tau_{mr}\).
+  It borrows the box by removing \(x_b\) from the linear environment.
+  Then, it adds a fresh linear variable \(x_h\) that points to a fresh location \(k_h\) that stores a value holder \(\text{hold}(k_b,\alpha)\).
+  This value holder points to the original box location \(k_b\).
+  Finally, the operation creates a mutable reference \(\text{mref}(l,\tau_{mr})\) that points to the same location \(l\), and it stores this reference at a fresh linear location \(k_{mr}\).
+
+  Formally, if \(x_b \in \mathrm{dom}(\rho_L)\), \(\rho_L(x_b)=k_b\), \(\sigma_L(k_b)=\text{box}(l,\tau_b)\), and there exist \(x_h, k_h, k_{mr}\) such that \(x_h \notin \mathrm{dom}(\rho_L)\), \(k_h \notin \mathrm{dom}(\sigma_L)\), and \(k_{mr} \notin \mathrm{dom}(\sigma_L)\), then:
+
+$$
+\mathsf{borrowMutBox}\bigl((\rho,(\sigma_L,\sigma_{NL}),\Lambda),\ x_b,\ \tau_{mr},\ \alpha\bigr)
+=
+\bigl(
+(\rho_L \setminus \{x_b\}) \cup \{x_h \mapsto k_h\}\ \cup\ \rho_{NL},\ 
+(\sigma_L[k_h \mapsto \text{hold}(k_b,\alpha)][k_{mr} \mapsto \text{mref}(l,\tau_{mr})],\ \sigma_{NL}),\
+\Lambda
+\bigr)
+$$
+
+#### Operations on Immutable References
+
+- ***Borrow an Immutable Reference***: This operation re-borrows an immutable reference and creates a new immutable reference that points to the same location.
+  It does not create a value holder.
+  Formally, if \(\sigma_{NL}(k_{ir})=\text{iref}(l,\tau)\) and \(k'_{ir} \notin \mathrm{dom}(\sigma_{NL})\), then:
+
+$$
+\mathsf{borrowImmut}_{\mathit{imm}}\bigl((\rho,(\sigma_L,\sigma_{NL}),\Lambda),\ k_{ir},\ \tau',\ k'_{ir}\bigr)
+=
+\bigl(\rho,(\sigma_L,\sigma_{NL}[k'_{ir} \mapsto \text{iref}(l,\tau')]),\Lambda\bigr)
+$$
+
+- ***Reading an Immutable Reference***: The operation \(\mathsf{readImmut}\) is valid if the immutable reference is reachable from the environment, and every value holder on every reaching path is associated with a lifetime that is not in \(\Lambda\).
+  Formally, if \(k_{ir} \in \mathrm{dom}(\sigma_{NL})\) and \(\sigma_{NL}(k_{ir})=\text{iref}(l,\tau)\), then:
+
+$$
+\mathsf{readImmut}\bigl((\rho,(\sigma_L,\sigma_{NL}),\Lambda),\ k_{ir}\bigr)
+=
+\begin{cases}
+(\rho,(\sigma_L,\sigma_{NL}),\Lambda)
+& \text{if }
+\Bigl(
+\exists y \in \mathrm{dom}(\rho_{NL}).\ \rho_{NL}(y)=k_{ir}
+\ \vee\
+\exists x \in \mathrm{dom}(\rho_L).\ x \rightsquigarrow k_{ir}
+\Bigr) \\[6pt]
+&\qquad \wedge\
+\Bigl(
+  \forall x \in \mathrm{dom}(\rho_L).\ 
+  \forall \pi \in \text{Paths}(x,k_{ir}).\
+  \forall i.\ 
+  \bigl(\sigma(\pi_i)=\text{hold}(\_,\alpha) \Rightarrow \alpha \notin \Lambda\bigr)
+\Bigr)
+\\[8pt]
+\mathsf{nonvalid}
+& \text{otherwise.}
+\end{cases}
+$$
+
+#### Operations on Mutable References
+
+- ***Borrow a Mutable Reference Immutably***: The operation \(\mathsf{borrowImmut}_{\mathit{mut}}\) gets a linear variable \(x_{mr}\) that points to a mutable reference, a new reference lifetime set \(\tau_{ir}\), and a value holder lifetime \(\alpha \in \tau_{ir}\).
+  It borrows the mutable reference by removing \(x_{mr}\) from the linear environment.
+  Then, it adds a fresh linear variable \(x_h\) that points to a fresh location \(k_h\) that stores a value holder \(\text{hold}(k_{mr},\alpha)\).
+  This value holder points to the original mutable reference location \(k_{mr}\).
+  Finally, the operation creates an immutable reference \(\text{iref}(l,\tau_{ir})\) that points to the same location \(l\), and it stores this reference at a fresh nonlinear location \(k_{ir}\).
+
+  Formally, if \(x_{mr} \in \mathrm{dom}(\rho_L)\), \(\rho_L(x_{mr})=k_{mr}\), \(\sigma_L(k_{mr})=\text{mref}(l,\tau_{mr})\), and there exist \(x_h, k_h, k_{ir}\) such that \(x_h \notin \mathrm{dom}(\rho_L)\), \(k_h \notin \mathrm{dom}(\sigma_L)\), and \(k_{ir} \notin \mathrm{dom}(\sigma_{NL})\), then:
+
+$$
+\mathsf{borrowImmut}_{\mathit{mut}}\bigl((\rho,(\sigma_L,\sigma_{NL}),\Lambda),\ x_{mr},\ \tau_{ir},\ \alpha\bigr)
+=
+\bigl(
+(\rho_L \setminus \{x_{mr}\}) \cup \{x_h \mapsto k_h\}\ \cup\ \rho_{NL},\ 
+(\sigma_L[k_h \mapsto \text{hold}(k_{mr},\alpha)],\ \sigma_{NL}[k_{ir} \mapsto \text{iref}(l,\tau_{ir})]),\
+\Lambda
+\bigr)
+$$
+
+- ***Borrow a Mutable Reference Mutably***: The operation \(\mathsf{borrowMut}\) is similar to \(\mathsf{borrowImmut}_{\mathit{mut}}\), but it creates a new mutable reference \(\text{mref}(l,\tau'_{mr})\) with a new lifetime set \(\tau'_{mr}\).
+  The operation \(\mathsf{borrowMut}\) gets a linear variable \(x_{mr}\) that points to a mutable reference, a new reference lifetime set \(\tau'_{mr}\), and a value holder lifetime \(\alpha \in \tau'_{mr}\).
+  It borrows the mutable reference by removing \(x_{mr}\) from the linear environment.
+  Then, it adds a fresh linear variable \(x_h\) that points to a fresh location \(k_h\) that stores a value holder \(\text{hold}(k_{mr},\alpha)\).
+  This value holder points to the original mutable reference location \(k_{mr}\).
+  Finally, the operation creates a new mutable reference \(\text{mref}(l,\tau'_{mr})\) that points to the same location \(l\), and it stores this reference at a fresh linear location \(k'_{mr}\).
+
+  Formally, if \(x_{mr} \in \mathrm{dom}(\rho_L)\), \(\rho_L(x_{mr})=k_{mr}\), \(\sigma_L(k_{mr})=\text{mref}(l,\tau_{mr})\), and there exist \(x_h, k_h, k'_{mr}\) such that \(x_h \notin \mathrm{dom}(\rho_L)\), \(k_h \notin \mathrm{dom}(\sigma_L)\), and \(k'_{mr} \notin \mathrm{dom}(\sigma_{L})\), then:
+
+$$
+\mathsf{borrowMut}\bigl((\rho,(\sigma_L,\sigma_{NL}),\Lambda),\ x_{mr},\ \tau'_{mr},\ \alpha\bigr)
+=
+\bigl(
+(\rho_L \setminus \{x_{mr}\}) \cup \{x_h \mapsto k_h\}\ \cup\ \rho_{NL},\ 
+(\sigma_L[k_h \mapsto \text{hold}(k_{mr},\alpha)][k'_{mr} \mapsto \text{mref}(l,\tau'_{mr})],\ \sigma_{NL}),\
+\Lambda
+\bigr)
+$$
+
+- ***Writing a Mutable Reference***: The operation \(\mathsf{writeMut}\) is valid if the mutable reference is reachable from the environment, and every value holder on every reaching path is associated with a lifetime that is not in \(\Lambda\).
+  Formally, if \(k_{mr} \in \mathrm{dom}(\sigma_{L})\) and \(\sigma_{L}(k_{mr})=\text{mref}(l,\tau)\), then:
+
+$$
+\mathsf{writeMut}\bigl((\rho,(\sigma_L,\sigma_{NL}),\Lambda),\ k_{mr}\bigr)
+=
+\begin{cases}
+(\rho,(\sigma_L,\sigma_{NL}),\Lambda)
+& \text{if }
+\exists x \in \mathrm{dom}(\rho_L).\ x \rightsquigarrow k_{mr} \\[6pt]
+&\qquad \wedge\
+\Bigl(
+  \forall x \in \mathrm{dom}(\rho_L).\ 
+  \forall \pi \in \text{Paths}(x,k_{mr}).\
+  \forall i.\ 
+  \bigl(\sigma(\pi_i)=\text{hold}(\_,\alpha) \Rightarrow \alpha \notin \Lambda\bigr)
+\Bigr)
+\\[8pt]
+\mathsf{nonvalid}
+& \text{otherwise.}
+\end{cases}
+$$
+
+To rule out incorrect memory states, the following subsections define extended well‑formedness rules related to lifetimes and value holders.
+
+A complete definition of these operations, their interaction with the memory state, and proofs that a correct program always results in a well-formed memory state is left as [future work](../conclusion/future-works.md).
+The operations presented in this part are mainly those that relate to imem’s goals, ownership and borrow checking.
+They illustrate how the new reference forms interact with each other and, therefore, motivate the well-formedness rules.
 
 #### Well-formedness
 
@@ -966,14 +1207,14 @@ n_{99} \mapsto 99
 \}
 $$
 
-The variable \(\texttt{list}\) points to a location that contains a box referencing the first element of the list.  
-This first element is stored at \(l_1\) and is a linear value composed of two boxed fields.  
-The first field, located at \(l_{\mathsf{h1}}\), is a box that points to a nonlinear integer value.  
+The variable \(\texttt{list}\) points to a location that contains a box referencing the first element of the list.
+This first element is stored at \(l_1\) and is a linear value composed of two boxed fields.
+The first field, located at \(l_{\mathsf{h1}}\), is a box that points to a nonlinear integer value.
 The second field, located at \(l_{\mathsf{t1}}\), is a box that points to the second element of the list.
 
-TODO: A DIAGRAM of how it looks
+TODO: A DIAGRAM OF HOW IT LOOKS
 
-The following example extends the previous list by adding a mutable reference to the first element and an immutable reference to the second element, while keeping the memory well formed.
+The following shows the result of applying the \( \mathsf{borrowMutBox} \) and \( \mathsf{borrowImmutBox} \) operations to the first and second elements, respectively, while keeping the memory well formed.
 
 The set of available lifetimes now includes three elements:
 
@@ -1038,7 +1279,7 @@ If the program accesses the box that points to the first element, the access mus
 
 Similarly, accessing the mutable reference passes through the hold at location \(l_{\mathsf{mut}}\). This access expires lifetime \(\gamma\), which results in the immutable reference becoming unavailable.
 
-TODO: A DIAGRAM THAT THE LIST IN IMEM WITH THE REFERENCES
+TODO: A DIAGRAM OF HOW IT LOOKS NOW
 
 ### Memory Management
 
