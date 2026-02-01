@@ -789,7 +789,7 @@ To fix this, imem adds a mechanism to expire \(\texttt{mr}_2\) after writing to 
 
 To address the [discussed issues](#well-formed-but-not-correct), imem must relate the availability of some references to the unavailability of other references.
 For example, borrowing a box mutably should invalidate all immutable references that are borrowed from the same box.
-To achieve this, imem introduces lifetimes and a new type of reference, called a value holder, and augments existing references with lifetime sets.  
+To achieve this, imem introduces lifetimes and a new type of reference, called a value holder, and augments existing references with lifetime sets.
 In addition, lifetimes enable static memory management.
 
 A lifetime is an entity that becomes available once during program execution and then expires.
@@ -992,7 +992,7 @@ Similar to the previous version, memory well-formedness concerns only the part t
 
 ##### Additional Definitions
 
-The *Resource*, *Reachability*, and *Direct Boxes* definitions remain the same.  
+The *Resource*, *Reachability*, and *Direct Boxes* definitions remain the same.
 The definition of *References Mentioned in a Value* changes slightly by adding value holder references:
 
 $$
@@ -1011,7 +1011,7 @@ $$
 The following presents the new definitions.
 
 ***Availability of References:***
-imem associates a set of lifetimes \(\tau \subseteq \mathcal{L}\) with the references \(\text{box}(l, \tau)\), \(\text{mref}(l, \tau)\), and \(\text{iref}(l, \tau)\).  
+imem associates a set of lifetimes \(\tau \subseteq \mathcal{L}\) with the references \(\text{box}(l, \tau)\), \(\text{mref}(l, \tau)\), and \(\text{iref}(l, \tau)\).
 If any lifetime in \(\tau\) expires, the reference becomes unavailable.
 Formally, a value \(v \in \{ \text{box}(l, \tau), \text{mref}(l, \tau), \text{iref}(l, \tau) \}\) is available iff:
 
@@ -1053,7 +1053,7 @@ x \rightsquigarrow k
 $$
 
 ***Access Expiration:***
-Accessing a reference \(r \in \{\text{box}(l,\_), \text{iref}(l,\_), \text{mref}(l,\_)\}\) expires a lifetime set \(\tau\) if either \(\tau\) is already expired, or every path that starts from an available linear variable and reaches \(r\) passes through a value holder \(\text{hold}(\_, \alpha)\) such that \(\alpha \in \tau\).  
+Accessing a reference \(r \in \{\text{box}(l,\_), \text{iref}(l,\_), \text{mref}(l,\_)\}\) expires a lifetime set \(\tau\) if either \(\tau\) is already expired, or every path that starts from an available linear variable and reaches \(r\) passes through a value holder \(\text{hold}(\_, \alpha)\) such that \(\alpha \in \tau\).
 Formally:
 
 $$
@@ -1295,6 +1295,6 @@ In this way, all memory regions reachable through references are managed safely 
 
 ## imem Implementation
 
-The Scala library imem enforces static rules to ensure that the part of program memory it manages remains well formed throughout execution.  
+The Scala library imem enforces static rules to ensure that the part of program memory it manages remains well formed throughout execution.
 These static rules include [ownership](./ownership.md) rules and [borrow-checking](./borrow-checking.md) rules.
 Because Scala provides many features that may interfere with these rules, the [soundness](./soundness.md) section presents guidelines that a program must follow to keep its memory well formed.

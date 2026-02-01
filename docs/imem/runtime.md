@@ -127,7 +127,7 @@ The `drop` method clears the stack.
 ### Box
 
 A box resembles conventional references, such as a C++ `unique` reference or a Rust `Box` reference.
-`Box` is a linear class. The program can store `Box` instances in other linear types, other boxes, pass them to functions, and borrow them to access their internal resources.  
+`Box` is a linear class. The program can store `Box` instances in other linear types, other boxes, pass them to functions, and borrow them to access their internal resources.
 However, unlike the Rust counterpart, a box in `imem` does not own its resource, as discussed in the [ownership section](./ownership.md).
 
 Structurally, a box contains an internal reference and its root tag.
