@@ -86,12 +86,99 @@ Therefore, it is not possible to leak or pass around a lifetime key while the li
 
 #### Box
 
-------------------------------------------------------------------------------------------------
+##### Resource
 
-<!-- TODO: Fix this -->
-Also, `WC^` and `MC^` has to be type parameters to 
-because the program has access to only one instance of `Context` that is provided to it by imem.
-Furthermore, The program is not able to create an instance of `Context`.
-So each function has to have two type parameters that the instantiate the `Context` type parameters.
+The `Box` class constructor is private, which means that a program can create a box only through the imem interfaces.
+These interfaces take a resource as input and return a box that points to that resource.
+imem assumes that the only Scala reference to the resource is the one passed to the box constructor.
+In other words, the program does not store the resource’s Scala reference, or any object that can reach that resource, elsewhere in memory.
+In the following example, the program creates two boxes that refer to the same resource:
 
-<!-- TODO: Explain `NeverUsableKey` -->
+```Scala
+TODO: CREATE TWO BOXES WITH TWO LINEAR RESOURCE THAT HAS A FIELD POINTING TO THE SAME NONLINEAR OBJECT
+```
+
+imem controls only access to a box’s resource, not the resource reaching memory.
+Therefore, if a program creates multiple resources that point to the same underlying object via Scala references, imem regulates access to those resources, not to the object they point to.
+Managing access to the shared object itself remains the program's responsibility.
+
+It is important to note that imem’s static guarantees no longer apply when a program reaches the non-linear part of memory.
+A box’s resource must be a linear class, and access to linear instances is statically controlled according to Scinear rules.
+If the resource's class’s fields are also linear, Scinear statically manages access to the memory associated with those fields as well, and this property propagates transitively.
+For this reason, imem recommends keeping memory linear as much as possible.
+
+One important guideline for linear memory is to replace direct linear fields with box fields that points to linear classes.
+For example, in the following `LinearBinTree` class, the fields have type `LinearBinTree`:
+
+```Scala
+TODO: A LINEAR_BIN_TREE CLASS THAT HAS TWO FIELDS LEFT AND RIGHT BOTH ARE LINEAR_BIN_TREE.
+```
+
+According to imem’s guarantees, this implementation is correct.
+However, when the program has access to a `LinearBinTree` instance's children, it cannot borrow them immutably or mutably.
+It also cannot reference both of a node's children simultaneously or iterate over the tree without consuming the tree and destructing and reconstructing it during the traversal.
+
+```Scala
+TODO: A BOX THAT POINTS TO A TREE WITH THREE NODES AND ACCESSING THE LEAF IS NOT POSSIBLE, JUST HAVING A REFERENCE TO THE ROOT IS POSSIBLE
+```
+
+The following example shows that when a `LinearBinTree` class refers to its children through `Box` instances, it is possible to hold a mutable reference to one child and an immutable reference to the other at the same time.
+
+```Scala
+TODO: LinearBinTree WITH BOXES AS FIELDS AND TWO REFERENCES, AN IMMUTABLE REFERENCE TO LEFT CHILD AND MUTABLE REFERENCE TO RIGHT CHILD.
+```
+
+##### Owner set
+
+In imem, the `Box` class has a capture set type parameter `Owner^`, which the program instantiates with the set of lifetimes that should outlive a box instance.
+imem does not statically enforce that all capabilities in this capture set are lifetime capabilities, because current Scala features do not allow such enforcement.
+
+Although it does not seem convenient to include a capability that is not a `Lifetime` instance in the owner set of a `Box`, `ImmutRef`, or `MutRef`, this does not hurt imem's soundness.
+As a capture set becomes larger, capture checking applies more restrictions, which preserves the soundness of imem.
+
+### Borrow Checking
+
+#### Borrowing New Owners
+
+When the program borrows a box or a reference, either immutably or mutably, through any imem interface, the function requires a new owner capture set type parameter, `newOwner^`, and the corresponding lifetime key, `newOwnerKey`, for that owner set.
+imem assumes that the program instantiates these parameters using one of the following two ways:
+
+- **A lifetime instance with its `Owners` and `Key` type members:**
+  This option enables the program to get back the borrowing's source.
+  In this case, the program can unlock the value holder only by using an instance of the associated lifetime key, which causes the lifetime to expire.
+
+- **`NeverUsableKey` with any lifetime set:**
+  This option is useful when the program no longer needs the source of the borrow and only requires the borrowed reference for use.
+  Because `NeverUsableKey` is an opaque type, the program cannot create instances of it, and therefore cannot unlock the value holder.
+
+There is no static enforcement that restricts valid programs to these two cases.
+This means that a program can misuse these parameters and break imem’s guarantees:
+
+```Scala
+TODO: A BORROWING THAT SET THE KEY AS OBJECT AND USE AN OBJECT INSTANCE TO OPEN THE HOLDER.
+```
+
+This constraint is not enforced statically because there is no way to use a path as a type parameter and require other type parameters to be path-dependent type members of that parameter.
+In addition, since the `Key` type member of `Lifetime` is a path-dependent opaque type, it is not possible to place type bounds on type parameters that may be instantiated with it.
+The [future work](../conclusion/future-works.md) section proposes an approach that would make misuse of these interfaces more explicit.
+
+#### Context
+
+##### Write and Move Capabilities
+
+The `Context` constructor is private, and `withImem` is the only imem interface that provides a `Context` instance to a program.
+Because the `WC^` and `MC^` type parameters of `Context`, which represent write and move capabilities, are neither covariant nor contravariant, a program cannot pass around the `Context` instance provided to it as a `Context` with different capture sets for these parameters.
+As a result, the write and move capability sets remain consistent and identical throughout the entire program.
+
+##### Owner Aggregation
+
+[Context owner aggregation](./borrow-checking.md#context-owner-aggregation) uses the capture-set annotation of the `Context` capturing type, `Context[WC, MC]^{ctxOwner}`, to represent the set of accumulated owners that are in scope.
+Unlike `WC^` and `MC^`, the `ctxOwner^` capture set is not a type parameter of `Context`, and therefore it is covariant.
+As a result, a program can assign a value of type `Context[WC, MC]^{A}` to a value of type `Context[WC, MC]^{B}` when `A <: B`.
+
+This behavior is safe as long as the new capture set still includes the relevant lifetime capabilities.
+However, because the universal capability `cap` is a superset of all capture sets, a program can assign a context of type `Context[WC, MC]^{ctxOwner}` to one of type `Context[WC, MC]^{cap}`.
+In this case, lifetime expiration no longer limits the context and the references borrowed using that context, which breaks imem rules.
+
+imem assumes that programs do not alter context's accumulated owners.
+Due to heavy limitations on type capturing the universal capability, `cap`, I was unable to find a concrete example in which this behavior breaks imem’s rules without also causing compile-time errors.
