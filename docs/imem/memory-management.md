@@ -186,6 +186,31 @@ $$
 
 imem extends linear values by introducing two kinds of linear references:
 
+------------------------------------------------------------------------------
+
+TODO: ADD THIS:
+A box resembles conventional references, such as a C++ `unique` reference or a Rust `Box` reference.
+`Box` is a linear class. The program can store `Box` instances in other linear types, other boxes, pass them to functions, and borrow them to access their internal resources.
+However, unlike the Rust counterpart, a box in `imem` does not own its resource, as discussed in the [ownership section](./ownership.md).
+
+TODO: ADD THIS:
+
+Mutable and immutable references are the only way that the program can access a box’s underlying resource.
+An immutable reference provides read-only access, whereas a mutable reference allows both read and write access.
+To obtain such a reference, the program should first borrow the box. 
+Then, the program can access the resource through the reference’s interface.
+
+Immutable references are not linear, so they can be replicated without any restriction.
+In contrast, mutable references are linear.
+
+Both reference types support reborrowing.
+Because an immutable reference is not a linear value, reborrowing is equivalent to replicating the immutable reference.
+However, the program can reborrow a mutable reference to derive either a new immutable reference or a new mutable reference.
+When the program mentions the original mutable reference, the derived reference(s) become unavailable.
+This behavior follows from the rules of the [Stacked Borrows Model](../background/stacked-borrows.md).
+
+------------------------------------------------------------------------------
+
 $$
 \begin{aligned}
   \text{Val}_L =

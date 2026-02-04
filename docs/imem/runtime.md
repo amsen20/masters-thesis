@@ -10,7 +10,7 @@ Static mechanisms, such as [ownership](./ownership.md) and [borrow checking](./b
 
 ### Resource
 
-A resource is an instance of any class for which imem manages access.
+As defined in [memory management section](./memory-management.md#additional-definitions), a resource is an instance of any class for which imem manages access.
 The resource class can be a built-in class, a user-defined class, or a non-private imem class, such as `Box`, `ImmutRef`, or `MutRef`.
 
 ### Unsafe Reference
@@ -126,15 +126,13 @@ The `drop` method clears the stack.
 
 ### Box
 
-A box resembles conventional references, such as a C++ `unique` reference or a Rust `Box` reference.
-`Box` is a linear class. The program can store `Box` instances in other linear types, other boxes, pass them to functions, and borrow them to access their internal resources.
-However, unlike the Rust counterpart, a box in `imem` does not own its resource, as discussed in the [ownership section](./ownership.md).
-
+The `Box` class implements the \(\text{box}\) references defined in [memory management section](./memory-management.md#memory-with-imem-references).
 Structurally, a box contains an internal reference and its root tag.
 The root tag has a unique (`Unq`) type, and its timestamp is the smallest.
 As a result, all derived tags have a larger timestamp than the root tag.
 
-The `Box` class provides two functions, `borrowImmutBox` and `borrowMutBox`, which borrow a box and create, respectively, an immutable or a mutable reference to the resource pointed to by the box.
+The `Box` class provides two functions, `borrowImmutBox` and `borrowMutBox`, which implement \(\mathsf{borrowImmutBox}\) and \(\mathsf{borrowMutBox}\) [operations](./memory-management.md#operations-on-boxes).
+They borrow a box and create, respectively, an immutable or a mutable reference to the resource pointed to by the box.
 During borrowing, the box derives a new tag from its own tag.
 This derivation produces either an immutable or a mutable reference, depending on the borrowing mode.
 
@@ -164,19 +162,7 @@ These operations perform a `useCheck` on the box’s internal reference.
 
 ### Mutable and Immutable References
 
-Mutable and immutable references are the only way that the program can access a box’s underlying resource.
-An immutable reference provides read-only access, whereas a mutable reference allows both read and write access.
-To obtain such a reference, the program should first borrow the box. 
-Then, the program can access the resource through the reference’s interface.
-
-Immutable references are not linear, so they can be replicated without any restriction.
-In contrast, mutable references are linear.
-
-Both reference types support reborrowing.
-Because an immutable reference is not a linear value, reborrowing is equivalent to replicating the immutable reference.
-However, the program can reborrow a mutable reference to derive either a new immutable reference or a new mutable reference.
-When the program mentions the original mutable reference, the derived reference(s) become unavailable.
-This behavior follows from the rules of the [Stacked Borrows Model](../background/stacked-borrows.md).
+`ImmutRef` and `MutRef` classes implement immutable and mutable references, \(\text{iref}\) and \(\text{mref}\), defined in [memory management](./memory-management.md#memory-with-imem-references):
 
 ```Scala
 class ImmutRef[T, ...](
@@ -201,7 +187,7 @@ def write[... T, ...](self: MutRef[T, ...]^, writeAction: ... ?-> T^ -> S)(...):
 
 Both reference types hold an internal reference and an access tag.
 
-The `borrowImmut` and `borrowMut` functions enable reference reborrowing.
+The `borrowImmut` and `borrowMut` functions enable reference re-borrowing, implementing \(\mathsf{borrowImmut}_{\mathit{imm}}\), \(\mathsf{borrowImmut}_{\mathit{mut}}\) and \(\mathsf{borrowMut}\) [operations](./memory-management.md#program-required-operations).
 The [ownership section](./ownership.md) explains the mechanism that invalidates derived references once the primary mutable reference is used at compile time.
 At runtime, accessing the primary mutable reference removes all derived reference tags from the internal reference's stack.
 
@@ -214,7 +200,7 @@ imem.write[Int, ...](mutRefPrimary, _ => ())
 imem.write[Int, ...](mutRefDerived, _ => ()) // error: `mutRefDerived`'s tag is popped
 ```
 
-Furthermore, `ImmutRef` and `MutRef` provide `read` and `write` interfaces, respectively.
+Furthermore, `ImmutRef` and `MutRef` provide `read` and `write` interfaces, respectively, which implement the \(\mathsf{readImmut}\) and \(\mathsf{writeMut}\) operations.
 These functions follow a continuation-passing style, applying the given action to the resource if the [Stacked Borrows Model](../background/stacked-borrows.md) allows it.
 
 All interfaces perform either a `readCheck` or a `useCheck` on the underlying internal reference, depending on the type of operation.

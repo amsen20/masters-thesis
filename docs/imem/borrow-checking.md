@@ -4,59 +4,52 @@ This section describes how imem manages borrowing and the references that result
 
 ## Borrow Checking Goals
 
-imem performs borrow checking to ensure that the following well-formedness properties are satisfied:
+### Dereferencing Definition
 
-- Borrowing Validity
-- Reaching properties:
-
-  - Box reaching Reference
-  - Mutable Reference reaching Immutable Reference
-  - Mutable Reference reaching Mutable Reference
-
-The following subsections redefine some of the formal concepts described in the [memory management section](./memory-management.md) to clarify how imem utilize them in implementation.
-
-### Definitions
-
-***Dereferencing a reference:***
-Given a reference $r: \text{Mut}[T, \ldots]$ or $r: \text{Immut}[T, \ldots]$ whose resource is $t: T$, dereferencing the reference, $deref(r)$ would result in $t$.
+Dereferencing a box or reference is the implementation counterpart of computing \( \sigma(l) \), where \( l \) is the location to which the box or reference points.
+This means that given a box \( b: \text{Box}[T, \ldots] \) whose resource is \( t: T \), dereferencing the box, \( deref(b) \), yields \( t \).
+That is, \( deref(b) = t \).
+And given a reference $r: \text{Mut}[T, \ldots]$ or $r: \text{Immut}[T, \ldots]$ whose resource is $t: T$, dereferencing the reference, $deref(r)$ would result in $t$.
 That is, $deref(r) = t$.
 
 ### Goals
 
-***Borrowing validity invariant:***
-During execution, for every immutable or mutable reference \(r \in \{\text{ImmutRef}[T, O'], \text{MutRef}[T, O']\}\), there is a box \(b : \text{Box}[T, O]\) that \(r\) is borrowed from, meaning \(deref(b) = deref(r)\) and \(O \subset O'\).
+imem performs borrow checking to ensure that the following well-formedness [properties](./memory-management.md#properties_1) are satisfied:
 
-***Stacked borrows:***
-At any point during program execution, the following are true:
+- ***Borrowing Validity:***
+  The implementation implication of this property is that during execution, for every immutable or mutable reference \(r \in \{\text{ImmutRef}[T, O'], \text{MutRef}[T, O']\}\), there is a box \(b : \text{Box}[T, O]\) that \(r\) is borrowed from, meaning \(deref(b) = deref(r)\) and \(O \subset O'\).
 
-- **Box reaching Reference:**
-  If a box \(b: \text{Box}[T, O]\) resource reaches a reference \(r \in \{\text{ImmutRef}[T', O'], \text{MutRef}[T', O']\}\) resource, in other words \(deref(b)\) reaches \(deref(r)\), then accessing \(b\) by an available variable causes \(r\) to become unavailable.
+- ***Box reaching Reference:***
+  In implementation, this property ensures that if a box \(b: \text{Box}[T, O]\) resource reaches a reference \(r \in \{\text{ImmutRef}[T', O'], \text{MutRef}[T', O']\}\) resource, in other words \(deref(b)\) reaches \(deref(r)\), then accessing \(b\) by an available variable causes \(r\) to become unavailable.
 
-- **Mutable Reference reaching Immutable Reference:**
-  If a mutable reference \(mr: \text{MutRef}[T, O]\) resource reaches an immutable reference \(ir \in \text{ImmutRef}[T', O']\) resource, in other words \(deref(mr)\) reaches \(deref(ir)\), then accessing \(mr\) by an available variable causes \(ir\) to become unavailable.
+- ***Mutable Reference reaching Immutable Reference:***
+  The implementation translation of this property means that if a mutable reference \(mr: \text{MutRef}[T, O]\) resource reaches an immutable reference \(ir \in \text{ImmutRef}[T', O']\) resource, in other words \(deref(mr)\) reaches \(deref(ir)\), then accessing \(mr\) by an available variable causes \(ir\) to become unavailable.
 
-- **Mutable Reference reaching Mutable Reference:**
-  If a mutable reference \(m_1: \text{MutRef}[T, O]\) resource reaches a mutable reference \(m_2: \text{MutRef}[T', O']\) resource, in other words \(deref(m_1)\) reaches \(deref(m_2)\), then:
+- ***Mutable Reference reaching Mutable Reference:***
+  Similar to its formal definition, in implementation, this property implies that if a mutable reference \(m_1: \text{MutRef}[T, O]\) resource reaches a mutable reference \(m_2: \text{MutRef}[T', O']\) resource, in other words \(deref(m_1)\) reaches \(deref(m_2)\), then:
 
   - If \(deref(m_1) \neq deref(m_2)\):
     Accessing \(m_1\) by an available variable causes \(m_2\) to become unavailable.
   - If \(deref(m1) = deref(m2)\):
     Either accessing \(m_1\) by an available variable causes \(m_2\) to become unavailable, or accessing \(m_2\) by an available variable causes \(m_1\) to become unavailable.
 
-**Mutable reference structurally constant view:**
+The following two properties are not included in the list of memory well-formedness properties described in the memory management section.
+However, the imem implementation needs to ensure them due to the addition of moving in the implementation:
 
-If a mutable reference \( mr: \text{MutRef}[T, O] \) is available, the structure of the subtree rooted at \( deref(mr) \) remains unchanged for as long as \( mr \) is available.
-This means that, for any box \( b: \text{Box}[T', O'] \) whose resource lies in that subtree, meaning \( deref(mr) \) reaches \( deref(b) \), the program does not perform `derefForMoving` or `moveBox` on \( b \) while \( mr \) is available.
+- ***Mutable reference structurally constant view:***
+  If a mutable reference \( mr: \text{MutRef}[T, O] \) is available, the structure of the subtree rooted at \( deref(mr) \) remains unchanged for as long as \( mr \) is available.
+  This means that, for any box \( b: \text{Box}[T', O'] \) whose resource lies in that subtree, meaning \( deref(mr) \) reaches \( deref(b) \), the program does not perform `derefForMoving` or `moveBox` on \( b \) while \( mr \) is available.
 
-**Immutable reference constant view:**
-If an immutable reference \(ir : \text{ImmutRef}[T, O]\) is available, then the entire subtree of \(deref(ir)\) remains read-only.
-This means that:
+- ***Immutable reference constant view:***
+  This property ensures the ***Immutable Reference not reaching Mutable Reference*** well-formedness property and extends it to account for moving.
+  The property implies that if an immutable reference \(ir : \text{ImmutRef}[T, O]\) is available, then the entire subtree of \(deref(ir)\) remains read-only.
+  This means that:
 
-- There is no available mutable reference \(mr : \text{MutRef}[T', O']\) whose resource is in that subtree, meaning \(deref(ir)\) reaches \(deref(mr)\).
-- For any box \(b : \text{Box}[T', O']\) whose resource is in that subtree, \(deref(ir)\) reaches \(deref(b)\), the program does not perform `setBox`, `swapBox`, `derefForMoving` or `moveBox` on \(b\) as long as \(ir\) is available.
+  - There is no available mutable reference \(mr : \text{MutRef}[T', O']\) whose resource is in that subtree, meaning \(deref(ir)\) reaches \(deref(mr)\).
+  - For any box \(b : \text{Box}[T', O']\) whose resource is in that subtree, \(deref(ir)\) reaches \(deref(b)\), the program does not perform `setBox`, `swapBox`, `derefForMoving` or `moveBox` on \(b\) as long as \(ir\) is available.
 
-imem ensures *Borrowing validity* through [Reference Ownership Management](#reference-ownership-management).
-It enforces *Stacked borrows* through [Box and Reference Holding](#box-and-reference-holding) and [Reference Owner Aggregation](#reference-owner-aggregation).
+imem ensures *Borrowing Validity* through [Reference Ownership Management](#reference-ownership-management).
+It enforces reaching properties through [Box and Reference Holding](#box-and-reference-holding) and [Reference Owner Aggregation](#reference-owner-aggregation).
 It also guarantees the *Mutable reference structurally constant view* and the *Immutable reference constant view* through [Static Permission Management](#static-permission-management-of-operations).
 
 ## Reference Ownership Management
@@ -152,7 +145,7 @@ The same as `borrowMut`, except that `borrowImmut` returns an immutable referenc
 ### Value Holder
 
 To ensure that `MutRef` and `Box`, or `ImmutRefs`, do not coexist for the same resource at the same time and to follow the [Stacked Borrows Model](../background/stacked-borrows.md), imem uses a mechanism that ties the existence of one entity to the non-existence of another.
-In the [memory management section](../imem/memory-management.md), \(hold\) references are responsible for tying reference accesses to the expiration of other references.
+In the [memory management section](../imem/memory-management.md#memory-with-imem-references-and-lifetimes), \(\text{hold}\) references are responsible for tying reference accesses to the expiration of other references.
 In the implementation, a combination of `ValueHolder` and `Lifetime` enables this mechanism.
 
 ```Scala
@@ -207,15 +200,15 @@ def borrowImmutBox[@scinear.HideLinearity T, Owner^, ..., newOwnerKey, newOwner^
   self: Box[T, Owner]^
 )(...): (ImmutRef[T, newOwner], ValueHolder[newOwnerKey, Box[T, Owner]^{self}]) = ...
 
-def borrowMutBox[@scinear.HideLinearity T, Owner^, ..., newOwnerKey, newOwner^ >: {..., Owner}, ...
+def borrowMutBox[@scinear.HideLinearity T, Owner^, ..., newOwnerKey, newOwner^ >: {..., Owner}, ...](
   self: Box[T, Owner]^
 )(...): (MutRef[T, newOwner], ValueHolder[newOwnerKey, Box[T, Owner]^{self}]) = ...
 
-def borrowMut[@scinear.HideLinearity T, Owner^, ..., newOwnerKey, newOwner^ >: {.., Owner}, ...
+def borrowMut[@scinear.HideLinearity T, Owner^, ..., newOwnerKey, newOwner^ >: {.., Owner}, ...](
   self: MutRef[T, Owner]^
 )(...): (MutRef[T, newOwner], ValueHolder[newOwnerKey, MutRef[T, Owner]^{self}]) = ...
 
-def borrowImmut[@scinear.HideLinearity T, Owner^, ..., newOwnerKey, newOwner^ >: {..., Owner}, ...
+def borrowImmut[@scinear.HideLinearity T, Owner^, ..., newOwnerKey, newOwner^ >: {..., Owner}, ...](
   self: MutRef[T, Owner]^
 )(...): (ImmutRef[T, newOwner], ValueHolder[newOwnerKey, MutRef[T, Owner]^{self}])
 ```
@@ -399,7 +392,7 @@ TODO: AN EXAMPLE WHERE YOU CAN DO BORROWIMMUT IN READ BUT YOU CANNOT DO BORROWMU
 ## Reference Owner Aggregation
 
 imem implements Reference Owner Aggregation to ensure that program memory follows the [Stacked Borrows Model](../background/stacked-borrows.md).
-In other words, it ensures that the [reaching properties](./memory-management.md#properties) are not violated.
+In other words, it ensures that the [reaching properties](./memory-management.md#properties_1) are not violated.
 
 ### Box and Reference Holding Insufficience
 
@@ -503,4 +496,3 @@ def borrowImmut[... T, Owner^, ctxOwner^, newOwnerKey, newOwner^ >: {ctxOwner, O
 ```
 
 Based on these two features, the context carries the union of the owners of all references used to reach a given program point, and the owners of any newly created reference are a superset of this aggregated set.
-
