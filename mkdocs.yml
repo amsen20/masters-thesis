@@ -54,6 +54,7 @@ nav:
     - Overview: evaluation/index.md
     - Baselines: evaluation/baselines.md
     - imem: evaluation/imem.md
+    - imem in practice: evaluation/imem-in-practice.md
     - Discussion: evaluation/discussion.md
   - Related works:
     - Overview: related-works/index.md
