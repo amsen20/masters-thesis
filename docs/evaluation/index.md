@@ -25,3 +25,5 @@ To evaluate the performance and practicality of imem, and to clarify what imem e
   This implementation aims to provide as much functionality as possible while strictly adhering to linearity, [Scinear](../scinear/index.md), rules.
   The comparison between this version and the imem implementation illustrates the practical advantages of imem over a purely linear approach.
 
+The chapter also includes examples of non-trivial cases in which violating imem’s static rules results in errors, and it demonstrates different situations where this occurs.
+Finally, the chapter discusses a comparison between the baseline implementations and the imem implementation in terms of functionality support, verbosity, and debuggability.
