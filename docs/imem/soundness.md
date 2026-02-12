@@ -1,44 +1,46 @@
 # Soundness
 
-This section explains why imem’s implementation ensures that the part of program memory managed by imem follows the well-formedness properties defined in the [memory management](./memory-management.md#well-formedness-2) section.
+This section explains why imem’s implementation ensures that the part of program memory managed by imem follows the well-formedness properties defined in the [memory management](./memory-management.md#well-formedness_2) section.
 It then discusses loopholes and unwanted API uses, whether they break imem’s guarantees, and the guidelines for avoiding those that do.
 
 ## Satisfying Well-formedness Properties
 
-------------------------------------------------------------------------------
+The following lists the memory [well-formedness properties](./memory-management.md#well-formedness_2) in imem and an explanation of how the implementation satisfies each property:
 
-TODO: START BY MAPPING EACH WELL FORMED NESS PROPERTY TO EXACTLY WHERE IT IS IMPLEMENTED
+- **Direct Box Uniqueness:**
+  The imem implementation of ownership and Scinear linearity rules follows the theoretical definitions of ownership and linearity described in the [memory management section](./memory-management.md#memory-with-imem-references-and-lifetimes).
+  The only difference appears in the case of moving, where the *direct-box lemma* proves the preservation of *Direct Box Uniqueness*.
 
-TODO: DESCRIBE THIS
+- **No cyclic box:**
+  The linearity of the `Box` class ensures that a program has only one access to a box instance.
+  In addition, borrow checking guarantees that the program can access either a mutable reference to a box or the box itself, but not both at the same time.
+  Together with the fact that boxes are the only source of mutability in imem, these properties ensure that the program cannot use `setBox` to assign a box’s value to itself or to a reference that reaches the same box.
+  As a result, the implementation satisfies *No cyclic box*.
 
-- ***No dangling boxes:***
-  Ownership ensures a subset of the [*No dangling references*](./memory-management.md#properties_1) well-formedness property.
-  This subset states that, during execution, all boxes reachable from available variables are alive.
-  The combination of ownership and borrow checking derives the full *No dangling references* property, and the details are described in the [soundness section](./soundness.md#satisfying-well-formedness-properties).
+- **No dangling references:**
+  The imem implementation does not fully satisfy the [theoretical definition](./memory-management.md#well-properties_1) of this property.
+  For example, if one `Box` instance reaches another `Box`, the capture set type argument of the reaching box is not always a superset of that of the reached box.
+  The *dangling-box-unavailability lemma* shows that, although defining dangling boxes is possible, such boxes become unavailable once the box they reach expires.
 
-TODO: USE THIS OR THROW IT AWAY
+- **Borrowing Validity:**
+  The [borrowing interfaces](./borrow-checking.md#reference-ownership-management) align with the [borrowing operations](./memory-management.md#new-and-changed-program-needed-operations).
+  They satisfy the property by ensuring that a reference resulting from borrowing does not outlive the original box.
 
-The following subsections presents an implementation-level definition of the formal concepts described in the [memory management section](./memory-management.md).
+- **Reaching Properties**:
+  The borrow-checking [goals sub-section](./borrow-checking.md#goals) explains in detail how the implementation satisfies the reaching properties, namely *Box reaching Reference*, *Mutable Reference reaching Immutable Reference*, *Mutable Reference reaching Mutable Reference*, and *Immutable Reference not reaching Mutable Reference*.
+  The implementation enforces these properties through [Box and Reference Holding](./borrow-checking.md#box-and-reference-holding), [Reference Owner Aggregation](./borrow-checking.md#reference-owner-aggregation), and [Static Permission Management](./borrow-checking.md#static-permission-management-of-operations).
 
-### Definitions
+### Supporting Lemmas
 
-***Decompose a linear value***
-Given an instance \( l \) of a linear class \( L \) with fields of types \( (T_1, T_2, \ldots, T_n) \), also called a linear value \( l: L \), decomposing the value using \( decomp(l) \) yields the list of field values of \( L \), namely \( (l_1: T_1, l_2: T_2, l_3: T_3, \ldots, l_n: T_n) \).
+#### Implementation Definition of Availability
 
-***Reachability:***
-During program execution, a value \(v\), which can be an instance of any class, can reach another value \(v'\) if there exists a sequence of operations \(Op_1, Op_2, Op_3, \ldots, Op_n\) such that each \(Op_i\) is one of the following operations and \(Op_1 \circ Op_2 \circ Op_3 \circ \ldots \circ Op_n (v) = v'\):
+In the imem implementation, the definition of availability differs slightly from the definition in the [memory management section](./memory-management.md#additional-definitions-1).
+The implementation defines availability based on the entire box or reference type, rather than only on its direct owner set.
 
-- If the input is a box \(b: \text{Box}[T, \ldots]\), the operation returns \(deref(b)\).
-- If the input is a linear value \(l: L\), the operation returns one of the elements of \(decomp(l)\).
+***Box and Reference Availability***
+At each point during program execution, a box or a reference is available if its type does not include any type parameter, direct or nested, instantiated with a capture set that contains an expired linear capability.
 
-```Scala
-TODO: AN EXAMPLE OF REACHABILITY
-```
-
-***Direct box:***
-Given a value \(v\), the list of direct boxes of \(v\), denoted \(direct(v)\), consists of all boxes \(b\) such that \(deref(b) = v\).
-
-***Available variable:***
+***Variable Availability:***
 A variable is available in the program scope at a point during execution if referring to the variable in an expression does not at that point produce a compiler error.
 In the imem context, this means:
 
@@ -46,20 +48,18 @@ In the imem context, this means:
 - If the variable has a linear type, it has not expired.
 - If the declared type of the variable includes type parameters instantiated with capture sets, any linear capability in those capture sets has not expired.
 
-***Resource***:
-A resource is a value \(v\) that is reachable from available variables and satisfies the condition \(|direct(v)| \geq 1\).
-
-***Aliveness:***
-At each point during program execution, a box \(b: \text{Box}[T, \ldots]\) is alive if its type does not include any type parameter instantiated with a capture set that contains an expired linear capability.
-
-TODO: ADD THIS
-
+#### Lemmas
 
 ***dangling-box-unavailability-lemma:***
-Let \(v: V\) be a value that reaches a box instance \(b': \text{Box}[T', Owner']\). The value \(v\) can be either a box \(b: \text{Box}[T, Owner]\) or a linear value \(l: L\). If a lifetime capability \(lf\) is in \(Owner'\), \(lf \in Owner'\), then \(lf\) occurs in at least one capture-set instantiation of a type parameter of \(V\).
+If a value \( v : V \) reaches a box instance \( b' : \text{Box}[T', Owner'] \) and a lifetime capability \( lf \in Owner' \) expires, then \( v \) becomes unavailable.
+
+**Proof.**
+Let \(v: V\) be a value that reaches a box instance \(b': \text{Box}[T', Owner']\).
+The value \(v\) can be either a box \(b: \text{Box}[T, Owner]\) or a linear value \(l: L\).
+If a lifetime capability \(lf\) is in \(Owner'\), \(lf \in Owner'\), the following proves that \(lf\) occurs in at least one capture set instantiation of a type parameter of \(V\):
 
 If a box \(b\) reaches another box \(b'\), then either \(b = b'\), or \(deref(b)\) reaches \(b'\).
-If a linear value \(l\) reaches a box \(b'\), then at least one field value \(f: F \in decomp(l)\) reaches \(b'\).
+If a linear value \(l\) reaches a box \(b'\), then at least one field value \(f: F\) reaches \(b'\).
 
 The proof uses induction on the number of reachability operations needed to obtain \(b'\) from \(v\).
 Let \(n \ge 0\) be such that there exists a sequence \(Op_1, \ldots, Op_n\) with \(Op_1 \circ \cdots \circ Op_n (v) = b'\).
@@ -79,18 +79,13 @@ In each case, the induction-hypothesis occurrence of \(lf\) in the intermediate 
   Based on the induction hypothesis, there exists a type parameter \(p\) of \(T\) that is instantiated with a capture set containing \(lf\).
   Since \(T\) is a type parameter of \(\text{Box}[T, Owner]\), the instantiation of \(T\) includes the instantiation of \(p\), and therefore includes \(lf\).
 
-- If \(v\) is a linear value \(l: L\), then some field value \(f: F \in decomp(l)\) reaches \(b'\).
+- If \(v\) is a linear value \(l: L\), then some field value \(f: F\) reaches \(b'\).
   By the induction hypothesis there exists a type parameter \(p\) of \(F\) that is instantiated with a capture set containing \(lf\).
   Each type parameter of \(F\) is instantiated either with types defined in \(L\) or with types built from type parameters of \(L\).
   Since linear classes do not allow nested type definitions, there exists a type parameter of \(L\) that \(p\) is instantiated with, and this instantiation contains a capture set that includes \(lf\).
 
-If a box instance \(b': \text{Box}[T', Owner']\) is not alive, then some lifetime capability \(lf \in Owner'\) has expired.
-Suppose another box instance or a linear value of type \(V\) reaches \(b'\).
-By the *dangling-box-unavailability-lemma*, the capability \(lf\) appears in a capture-set instantiation of a type parameter of \(V\).
-Consequently, any variable that refers to this box instance or linear value has a type that includes an expired lifetime capability and is therefore unavailable.
-It follows that every box reachable from an available variable must be alive, which establishes that the *No dangling boxes* property always holds.
-
-TODO: ADD THIS
+By induction, if a value \( v : V \) reaches a box instance \( b' : \text{Box}[T', Owner'] \) and \( Owner' \) includes a lifetime \( lf \), then the capability \( lf \) appears in a capture-set instantiation of a type parameter of \( V \).  
+Therefore, if \( lf \) expires, the value \( v : V \) becomes unavailable, proving the lemma.
 
 ***direct-box-lemma:***
 Assume that every resource has exactly one direct box.
@@ -111,14 +106,12 @@ Assume that the program applies `derefForMoving` to a box \(b : \text{Box}[T, Ow
 Since `Box` is a linear type, the program cannot reach \(b\) after it is passed to `derefForMoving`, and the program also cannot reach \(b\) during the `moveAction` continuation.
 
 During `moveAction`, the value \(t = deref(b)\) is passed to the continuation as an [escape-checked](../background/capturing-types.md#escape-checking) argument.
-The value \(t\) is not a resource because \(direct(t) = 0\).
+The value \(t\) is not a resource because there is no available reachable box pointing to it.
 Moreover, the only box that provides access to \(t\) is \(b\), and \(b\) is inaccessible inside `moveAction`.
 Also, because the `newBox` function requires a resource argument with an empty capture set, the program, inside `moveAction`, cannot create a new box that turns \(t\) into a resource again.
 
 After `moveAction`, since \(t\) was an escape-checked argument in `moveAction`; the program can only access \(t\) after `moveAction` if `moveAction` returns \(t\).
 In that case, \(t\) is still not a resource, and the statement of the lemma continues to hold.
-
-------------------------------------------------------------------------------
 
 ## Possible Loopholes and Guidelines
 

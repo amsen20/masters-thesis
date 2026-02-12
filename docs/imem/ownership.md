@@ -8,7 +8,7 @@ Ownership management in imem's implementation aims to satisfy the following [pro
 
 - ***No dangling boxes:***
   This property is a subset of the [*No dangling references*](./memory-management.md#properties_1) well-formedness property.
-  This subset states that, during execution, all boxes reachable from available variables are alive.
+  This subset states that, during execution, all boxes reachable from available variables are available themselves.
   The combination of ownership and borrow checking derives the full *No dangling references* property, and the details are described in the [soundness section](./soundness.md#satisfying-well-formedness-properties).
 
 - [***Direct Box Uniqueness***](./memory-management.md#properties_1)
@@ -213,7 +213,7 @@ It then either calls `derefForMoving` on those boxes to explore their resources 
 
 `derefForMoving` only returns the result of `moveAction`.
 Therefore, the box instance passed as the `self` argument expires after `derefForMoving`, and there is no way to recover it.
-This behavior is intentional, and the [Uniqueness of Direct Box subsection](#uniqueness-of-direct-box-during-moving) explains how it preserves the *Direct box uniqueness* goal.
+This behavior is intentional, and the [*direct-box-lemma*](./soundness.md#satisfying-well-formedness-properties) proves that moving interfaces in the imem memory management implementation preserves the [*Direct Box Uniqueness*](./memory-management.md#properties_1) property.
 
 TODO: A DIAGRAM OF DANGLING REFERENCE WHEN MOVING
 
@@ -230,8 +230,6 @@ Here is an example of moving the inner box of a nested box `Box[Box[Int, {lf1}],
 ```Scala
 TODO: AN EXAMPLE OF MOVING `Box[Box[Int, {lf1}]{lf1}]` to `lf2`
 ```
-
-The [*direct-box-lemma*](./soundness.md#satisfying-well-formedness-properties) proves that moving interfaces in the imem memory management implementation preserves the [*Direct Box Uniqueness*](./memory-management.md#properties_1) property.
 
 ## Resource Ownership
 
