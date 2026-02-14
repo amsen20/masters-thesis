@@ -137,7 +137,7 @@ imem assumes that boxes are the only source of mutation.
 In Scala, a class field or a variable can be mutable when it is defined using `var`.
 Because imem is not a compiler plugin and does not parse the program that uses it, it cannot determine whether `var`s are present.
 
-However, imem aims to provide safe mutability through static rules enforcing [Stacked Borrows Model](../background/stacked-borrows.md).
+However, imem aims to provide safe mutability through static rules enforcing the [Stacked Borrows Model](../background/stacked-borrows.md).
 The only mutations that imem manages are calls to the `swapBox` and `setBox` functions on imem boxes.
 Other sources of mutation are outside the control of imem, and when a program includes them, imem cannot guarantee their safety.
 
