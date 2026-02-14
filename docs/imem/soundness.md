@@ -115,7 +115,7 @@ In that case, \(t\) is still not a resource, and the statement of the lemma cont
 
 ## Possible Loopholes and Guidelines
 
-The following subsections list possible loopholes or unwanted cases and discusses whether a valid program can exhibit them and, if so, following what guidelines would avoid reaching any memory state that is not well-formed.
+The following subsections list possible loopholes or unwanted cases and discuss whether a valid program can exhibit them and, if so, following what guidelines would avoid reaching any memory state that is not well-formed.
 
 ### General
 
