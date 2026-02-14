@@ -286,5 +286,5 @@ This behavior is safe as long as the new capture set still includes the relevant
 However, because the universal capability `cap` is a superset of all capture sets, a program can assign a context of type `Context[WC, MC]^{ctxOwner}` to one of type `Context[WC, MC]^{cap}`.
 In this case, lifetime expiration no longer limits the context and the references borrowed using that context, which breaks imem rules.
 
-imem assumes that programs do not alter context's accumulated owners.
+imem assumes that programs do not alter the accumulated owners of a context.
 Due to heavy limitations on type capturing the universal capability, `cap`, I was unable to find a concrete example in which this behavior breaks imem’s rules without also causing compile-time errors.
