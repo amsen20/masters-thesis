@@ -168,7 +168,7 @@ The following section lists these cases.
 
 imem doesn't allow the program to have access to the internal components by:
 
-- Making `UnsafeRef` and `InternalRef` private to imem package.
+- Making `UnsafeRef` and `InternalRef` private to the imem package.
 - Marking all fields of `Box`, `ImmutRef` and `MutRef` class as private.
 
 In this way the program is not able to neither import internal components, instantiate them, nor access them through publicly accessible classes in imem.
