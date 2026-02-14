@@ -195,7 +195,7 @@ It is important to note that unlike the Rust counterpart, a box in imem does not
 Mutable and immutable references are the only way that the program can access a the resource in a box.
 An immutable reference provides read-only access, whereas a mutable reference allows both read and write access.
 To obtain such a reference, the program should first borrow the box.
-Then, the program can access the resource through the reference’s interface.
+Then, the program can access the resource through the interface of the reference.
 
 Immutable references are not linear, so they can be replicated without any restriction.
 In contrast, mutable references are linear.
