@@ -250,7 +250,7 @@ When the program borrows a box or a reference, either immutably or mutably, thro
 imem assumes that the program instantiates these parameters using one of the following two ways:
 
 - **A lifetime instance with its `Owners` and `Key` type members:**
-  This option enables the program to get back the borrowing's source.
+  This option enables the program to get back the source of the borrowing.
   In this case, the program can unlock the value holder only by using an instance of the associated lifetime key, which causes the lifetime to expire.
 
 - **`NeverUsableKey` with any lifetime set:**
