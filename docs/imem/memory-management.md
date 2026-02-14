@@ -186,7 +186,7 @@ The following is the list of the new references.
 ##### Box References
 
 A box is a linear value that resembles conventional references, such as a C++ `unique` reference or a Rust `Box` reference.
-A box reference points to a linear or nonlinear location, and the object residing in that location is called the box's resource.
+A box reference points to a linear or nonlinear location, and the object residing in that location is called the resource in the box.
 Because boxes are linear, they form a tree structure.
 It is important to note that unlike the Rust counterpart, a box in imem does not own its resource, which is discussed in the next [part](#memory-with-imem-references-and-lifetimes).
 
