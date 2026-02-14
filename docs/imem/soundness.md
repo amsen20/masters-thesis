@@ -144,7 +144,7 @@ Other sources of mutation are outside the control of imem, and when a program in
 ### Escape Checking
 
 imem uses [escape-checking](../background/capturing-types.md#escape-checking) to prevent resources from leaking outside their intended scope.
-As discussed in the [escape-checking propagation](../background/capturing-types.md#propagating-to-fields), for escape-checking to propagate from a class instance to its fields, each field must either be a capability or have a type that captures `this`.
+As discussed in the [escape-checking propagation](../background/capturing-types.md#propagating-to-fields) section, for escape-checking to propagate from a class instance to its fields, each field must either be a capability or have a type that captures `this`.
 Otherwise, when an instance is subject to escape-checking, its fields are not bound to the same scope as the instance.
 
 This limitation is particularly important when a box’s resource is a linear class with multiple fields.
