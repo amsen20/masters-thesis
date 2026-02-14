@@ -115,7 +115,7 @@ TODO: THE LAST EXAMPLE OF TWO DIRECTED NESTED BOXES BUT THE INNER BOX LIFETIME I
 ```
 
 Although this situation is possible, as shown above, it does not lead to dangling boxes.
-Unlike the [*No dangling references*](./memory-management.md#properties_1) property defined in memory management, the imem implementation does not enforce that a box reaching another box, either directly or indirectly, has an owner lifetime that is a superset of the reached box’s owner set.
+Unlike the [*No dangling references*](./memory-management.md#properties_1) property defined in memory management, the imem implementation does not enforce that a box reaching another box, either directly or indirectly, has an owner lifetime that is a superset of the owner set of the box that is reached.
 However, the [*dangling-box-unavailability-lemma*](./soundness.md#satisfying-well-formedness-properties) proves that the implementation ensures a box becomes unavailable when it can reach a box with an expired lifetime in its owner set.
 
 As a demonstration, in the previous example, the outer box does not mention the expired lifetime capability directly.
