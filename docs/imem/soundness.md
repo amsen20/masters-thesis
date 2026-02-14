@@ -155,7 +155,7 @@ TODO: A LINEAR CLASS WITH LINEAR FIELDS AND BEING A BOX'S RESOURCE. WHEN THE PRO
 ```
 
 If the class definition does not follow the escape-checking propagation rules, a program may leak the class fields.
-imem assumes that every linear class that is a box’s resource satisfies these requirements.
+imem assumes that every linear class that is a resource in a box satisfies these requirements.
 
 ### imem Components
 
