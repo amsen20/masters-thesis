@@ -1,6 +1,6 @@
 # Rust
 
-[Rust](https://doc.rust-lang.org/book/title-page.html) is a programming language that provides static memory management and explicit mutability control through [ownership rules](https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html) and the [borrow checker](https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html).
+[Rust](https://doc.rust-lang.org/book/title-page.html) is a programming language that provides static memory management and static mutability control through [ownership rules](https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html) and the [borrow checker](https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html).
 This section provides a brief introduction to Rust’s static ownership rules and borrow checking.
 
 ## Ownership
@@ -55,24 +55,63 @@ They have a single owner, which is a variable, at each point during program exec
 
 ## Borrowing 
 
-------------------------------------------
+To allow a program to access a value without taking ownership of it, that is, without moving it, Rust provides borrowing.
+A program can borrow a value and create references to it.
+Borrowing can be mutable or immutable, which results in either a mutable reference or an immutable reference.
+The difference between holding a reference to a value and owning it directly is that a reference does not own the value.
+When the reference goes out of scope, only the reference is dropped, and the value it points to is not dropped.
+The following program demonstrates a Rust example that borrows a string value, first mutably and then immutably:
 
-<!-- TODO: This might be in the background, but you should have an explanation somewhere of what a Box means/does in Rust. -->
+```Rust
+fn main() {
+    let mut s = String::from("hello");
 
-# Ownership
+    let r1 = &mut s; // borrow `s` mutably
+    r1.push_str(" world"); // update the string
 
-TODO: Explain rust style ownership and borrowing, most of them is about ownership but Rust stuff in examples and at the end. This would replace the rust section
+    let r2 = &s; // borrow `s` immutably
+    println!("Immutable borrow: {}", r2); // print the string
+}
+```
 
-This section begins with a broad overview of different kinds of ownership, followed by the thesis's focus on variables that own their value. It mentions that Rust uses this concept, and a couple of examples in Rust and Scala (using `imem`) are shown. Then, it elaborates on the memory management use case of this concept, which is that a value can be freed when its owner is out of scope.
+A lifetime represents a statically known consecutive part of a program, which is also referred to as a non-lexical scope.
+Every reference has a lifetime, which is the part of the program during which the reference is valid.
+The following code shows the previous example with annotated lifetimes:
 
-ONLY SAY THE STUFF THAT THE READER NEEDS
+```Rust
+fn main() {
+    let mut s = String::from("hello");    // -----------------+-- 'a
+                                          //                  |
+    let r1 = &mut s;                      // -+-- 'b          |
+    r1.push_str(" world");                // -+               |
+                                          //                  |
+    let r2 = &s;                          // -+-- 'c          |
+    println!("Immutable borrow: {}", r2); // -+               |
+}                                         // -----------------+
+```
 
-## Borrowing
+In the example above, the lifetimes of both references, `r1` and `r2`, which are `'b` and `'c`, lie within the non-lexical scope in which `s` owns the string, namely `'a`.
+In addition, the lifetime `'b` of the mutable reference `r1` ends before the lifetime `'c` of the immutable reference `r2` begins.
 
-It describes what borrowing is and why it is useful in the first place, and how it helps the programmer to define functions and classes without returning every argument that is needed. Then it explains the borrowing rules:
-- There should be either one mutable or multiple immutable borrowed references to an object at the same time.
-- No borrowed reference should outlive the main object.
+The borrow checker ensures the following properties by reasoning about references lifetimes statically:
 
-## Stacked borrows model
+- At any given time, the program can have either one mutable reference or any number of immutable references to a value.
+- The value that a reference points to should not be dropped, meaning there is no dangling pointers.
 
-A brief explanation of [stacked borrowed model](https://plv.mpi-sws.org/rustbelt/stacked-borrows/paper.pdf) with a simple example.
+The first goal is to ensure static mutability control by preventing the existence of a mutable reference together with another mutable reference or with immutable references at the same time.
+In the example above, at the point where the lifetime of `r2`, an immutable reference, begins, the lifetime of `r1`, a mutable reference, ends.
+
+The second goal of the borrow checker is to ensure that no dangling pointers exist at any point during execution.
+To achieve this goal, Rust enforces a stricter rule regarding reference lifetimes: a reference lifetime must lie within the non-lexical scope in which the owner of the value at the time of borrowing remains the owner of that value.
+Therefore, if a value is borrowed and a reference is created, and the value is then moved, rather than dropped, the reference becomes invalid and its lifetime ends, as the example below shows:
+
+```Rust
+fn main() {
+    let s1 = String::from("Hello"); // s1 is the Owner
+    let r1 = &s1; // r1 borrows s1
+
+    let s2 = s1; // both s1 and r1 become invalid
+
+    println!("{}", r1); // error
+}
+```
