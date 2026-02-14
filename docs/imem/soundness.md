@@ -204,7 +204,7 @@ In the following example, the program creates two boxes that refer to the same r
 TODO: CREATE TWO BOXES WITH TWO LINEAR RESOURCE THAT HAS A FIELD POINTING TO THE SAME NONLINEAR OBJECT
 ```
 
-imem controls only access to a box’s resource, not the resource reaching memory.
+imem controls only access to a resource in a box, not the resource reaching memory.
 Therefore, if a program creates multiple resources that point to the same underlying object via Scala references, imem regulates access to those resources, not to the object they point to.
 Managing access to the shared object itself remains the program's responsibility.
 
