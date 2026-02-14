@@ -147,7 +147,7 @@ imem uses [escape-checking](../background/capturing-types.md#escape-checking) to
 As discussed in the [escape-checking propagation](../background/capturing-types.md#propagating-to-fields) section, for escape-checking to propagate from a class instance to its fields, each field must either be a capability or have a type that captures `this`.
 Otherwise, when an instance is subject to escape-checking, its fields are not bound to the same scope as the instance.
 
-This limitation is particularly important when a box’s resource is a linear class with multiple fields.
+This limitation is particularly important when the resource in a box is a linear class with multiple fields.
 As the following example illustrates:
 
 ```Scala
