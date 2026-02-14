@@ -1186,7 +1186,7 @@ $$
 
 imem extends the previous model with [lifetimes](#memory-with-imem-references-and-lifetimes) and value holders, \( \text{hold}(l,\alpha) \).
 
-Based on the well-formedness rules, whenever a mutable or immutable reference points to a box’s resource, a value holder points to that box.
+Based on the well-formedness rules, whenever a mutable or immutable reference points to a resource in a box, a value holder points to that box.
 Similarly, whenever an immutable or mutable reference points to the resource of a mutable reference, a value holder points to that mutable reference.
 
 By adding value holders and their connections to the resources they reference to the graph described in the [previous part](#overview-1), the graph remains a DAG.
