@@ -197,7 +197,7 @@ Therefore, it is not possible to leak or pass around a lifetime key while the li
 The `Box` class constructor is private, which means that a program can create a box only through the imem interfaces.
 These interfaces take a resource as input and return a box that points to that resource.
 imem assumes that the only Scala reference to the resource is the one passed to the box constructor.
-In other words, the program does not store the resource’s Scala reference, or any object that can reach that resource, elsewhere in memory.
+In other words, the program does not store the Scala reference of the resource, or any object that can reach that resource, elsewhere in memory.
 In the following example, the program creates two boxes that refer to the same resource:
 
 ```Scala
