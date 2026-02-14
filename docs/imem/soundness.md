@@ -5,7 +5,7 @@ It then discusses loopholes and unwanted API uses, whether they break imem’s g
 
 ## Satisfying Well-formedness Properties
 
-The following lists the memory [well-formedness properties](./memory-management.md#well-formedness_2) in imem and an explanation of how the implementation satisfies each property:
+The following lists the memory [well-formedness properties](./memory-management.md#well-formedness_2) in imem and explains how the implementation satisfies each property:
 
 - **Direct Box Uniqueness:**
   The imem implementation of ownership and Scinear linearity rules follows the theoretical definitions of ownership and linearity described in the [memory management section](./memory-management.md#memory-with-imem-references-and-lifetimes).
