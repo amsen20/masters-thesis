@@ -148,7 +148,7 @@ As discussed in the [escape-checking propagation](../background/capturing-types.
 Otherwise, when an instance is subject to escape-checking, its fields are not bound to the same scope as the instance.
 
 This limitation is particularly important when the resource in a box is a linear class with multiple fields.
-As the following example illustrates:
+This is illustrated by the following example:
 
 ```Scala
 TODO: A LINEAR CLASS WITH LINEAR FIELDS AND BEING A BOX'S RESOURCE. WHEN THE PROGRAM ACCESS THE RESOURCE IT CAN LEAK THE FIELDS.
