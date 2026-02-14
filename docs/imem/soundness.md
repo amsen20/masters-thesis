@@ -221,7 +221,7 @@ TODO: A LINEAR_BIN_TREE CLASS THAT HAS TWO FIELDS LEFT AND RIGHT BOTH ARE LINEAR
 ```
 
 According to imem’s guarantees, this implementation is correct.
-However, when the program has access to a `LinearBinTree` instance's children, it cannot borrow them immutably or mutably.
+However, when the program has access to the children of a `LinearBinTree` instance, it cannot borrow them immutably or mutably.
 It also cannot reference both of a node's children simultaneously or iterate over the tree without consuming the tree and destructing and reconstructing it during the traversal.
 
 ```Scala
