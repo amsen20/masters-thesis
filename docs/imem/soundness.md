@@ -213,7 +213,7 @@ A resource in a box must be a linear class, and access to linear instances is st
 If the fields of the resource class are also linear, Scinear statically manages access to the memory associated with those fields as well, and this property propagates transitively.
 For this reason, imem recommends keeping memory linear as much as possible.
 
-One important guideline for linear memory is to replace direct linear fields with box fields that points to linear classes.
+One important guideline for linear memory is to replace direct linear fields with box fields that point to linear classes.
 For example, in the following `LinearBinTree` class, the fields have type `LinearBinTree`:
 
 ```Scala
