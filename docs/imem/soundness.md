@@ -209,7 +209,7 @@ Therefore, if a program creates multiple resources that point to the same underl
 Managing access to the shared object itself remains the program's responsibility.
 
 It is important to note that imem’s static guarantees no longer apply when a program reaches the non-linear part of memory.
-A box’s resource must be a linear class, and access to linear instances is statically controlled according to Scinear rules.
+A resource in a box must be a linear class, and access to linear instances is statically controlled according to Scinear rules.
 If the resource's class’s fields are also linear, Scinear statically manages access to the memory associated with those fields as well, and this property propagates transitively.
 For this reason, imem recommends keeping memory linear as much as possible.
 
