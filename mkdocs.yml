@@ -56,7 +56,7 @@ nav:
     - Discussion: evaluation/discussion.md
   - Related works:
     - Overview: related-works/index.md
-    - Dynamic memory management: related-works/dynamic-memory-management.md
+    - Static Memory Management Through Time: related-works/cyc-to-rust.md
     - Static memory management: related-works/static-memory-management.md
   - Conclusion: 
     - Overview: conclusion/index.md
