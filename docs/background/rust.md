@@ -95,7 +95,7 @@ In addition, the lifetime `'b` of the mutable reference `r1` ends before the lif
 
 The borrow checker ensures the following properties by reasoning about references lifetimes statically:
 
-- At any given time, the program can have either one mutable reference or any number of immutable references to a value.
+- At any given time, the program can have either one mutable reference or any number of immutable references to a value, which limits aliasing.
 - The value that a reference points to should not be dropped, meaning there is no dangling pointers.
 
 The first goal is to ensure static mutability control by preventing the existence of a mutable reference together with another mutable reference or with immutable references at the same time.
