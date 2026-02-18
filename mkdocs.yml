@@ -57,6 +57,7 @@ nav:
   - Related works:
     - Overview: related-works/index.md
     - Static Memory Management Through Time: related-works/cyc-to-rust.md
+    - Scala Ecosystem: related-works/scala-ecosystem.md
     - Static memory management: related-works/static-memory-management.md
   - Conclusion: 
     - Overview: conclusion/index.md

@@ -71,7 +71,7 @@ As a result, other guarded references with the same key cannot obtain focus view
 
 ## Rust
 
-Rust, which is explained in detail in [backgrounds](../background/rust.md), is inspired by Cyclone, Vault, and many other.
+[Rust](https://dl.acm.org/doi/abs/10.1145/3158154), which is explained in detail in [backgrounds](../background/rust.md), is inspired by Cyclone, Vault, and many other.
 It provides static memory management and static mutability control.
 Rust enforces static memory management by applying ownership rules.
 Moreover, it achieves memory safety and static mutability control through borrow checking.
