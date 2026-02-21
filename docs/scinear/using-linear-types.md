@@ -1,6 +1,6 @@
 # Using Linear Types
 
-Scinear follows the same [rule](../background/linear-types.md#main-linearity-rule) as [the main linearity paper](https://www.researchgate.net/profile/Philip-Wadler/publication/2429119_Linear_Types_Can_Change_the_World/links/6410b420315dfb4cce7cf9bc/Linear-Types-Can-Change-the-World.pdf).
+Scinear follows the same [rule](../background/linear-types.md) as [the main linearity paper](https://www.researchgate.net/profile/Philip-Wadler/publication/2429119_Linear_Types_Can_Change_the_World/links/6410b420315dfb4cce7cf9bc/Linear-Types-Can-Change-the-World.pdf).
 That is, a program accesses a linear value through a single reference, and this reference is read only once during execution.
 
 To enforce this rule statically in a Scala program, Scinear tracks identifiers bound to values of linear types, called linear variables.

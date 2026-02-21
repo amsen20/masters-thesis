@@ -25,7 +25,7 @@ In the following rules, Scinear handles linear fields and nonlinear fields diffe
 ### Internal and External Fields
 
 In Scala, a class field may reference other fields within the same class during initialization.
-However, this access violates the [linearity rule](../background/linear-types.md#main-linearity-rule) during the construction of linear classes.
+However, this access violates the [linearity rule](../background/linear-types.md) during the construction of linear classes.
 For example, consider the following definitions:
 
 ```Scala
@@ -125,7 +125,7 @@ These method exemptions maintain practicality within a standard Scala 3 codebase
 ### `this` in Linear Classes
 
 Accessing `this` implies reading the value of the instance referred to by the keyword.
-This reference would violate the [linearity rule](../background/linear-types.md#main-linearity-rule) if the instance is linear.
+This reference would violate the [linearity rule](../background/linear-types.md) if the instance is linear.
 For example:
 ```Scala
 class LinearList(val data: Int, val next: LinearList) extends Linear:
