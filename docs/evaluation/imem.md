@@ -609,7 +609,7 @@ The implementation starts by popping an element from the list.
 To achieve this, the function first borrows the iterator reference to access the list.
 It then mutably borrows the box that points to the list and returns that reference.
 
-When borrowing the box that points to the list, which is `iter.list`, the program no longer needs access the box later and only needs a mutable reference to the list.
+When borrowing the box that points to the list, which is `iter.list`, the program no longer needs to access the box later and only needs a mutable reference to the list.
 Therefore, the box is borrowed with `{O2, ctx}` as the owner of the reference and `NeverUsableKey` as the key.
 This approach allows the program to borrow the reference without tying it to a new lifetime.
 The `NeverUsableKey` is an opaque type for which no instances can be created, which makes the `ValueHolder` impossible to unlock.
