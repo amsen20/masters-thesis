@@ -160,7 +160,7 @@ If the function does not explicitly state that `O3^` is a superset of `O1` or `O
 
 ## Using Iterators
 
-The following examples show how imem enforces that the program has access to either the list or the mutable iterator at the same time, and that the list is no longer accessible after a consuming iterator is created.
+The following examples show how imem enforces that the program has access to either the list or the mutable iterator, but not both at the same time, and that the list is no longer accessible after a consuming iterator is created.
 
 ```Scala
 // create an empty list with {ctx} as its lifetime
