@@ -1,6 +1,6 @@
 # imem in practice
 
-This section explains how not to follow imem rules results in compile errors and demonstrates the practicality of imem.
+This section explains how not following imem rules results in compile errors. This section also demonstrates the practicality of imem.
 
 ## Linked List Implementation
 
