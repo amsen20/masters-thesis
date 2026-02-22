@@ -713,7 +713,7 @@ end MutableIterator
 
 To implement a mutable iterator in imem, the structure must hold a mutable reference to a node in the list.
 Because this mutable reference changes each time the iterator advances to the next node, it must be stored in a mutable field.
-According to the imem's [guidelines](../imem/soundness.md), `Box` is the only source of mutation that is statically controlled by imem.
+According to the imem [guidelines](../imem/soundness.md), `Box` is the only source of mutation that is statically controlled by imem.
 As a result, the iterator’s `boxToLink` field is a box containing a mutable reference that points to a link, which either refers to the next node to be visited or is `None`.
 
 Another important aspect is that the `MutableIterator` class has two capture set type parameters:
