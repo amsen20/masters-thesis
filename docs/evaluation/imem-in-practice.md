@@ -224,7 +224,7 @@ mutIter.consume()
 ...
 ```
 
-The compilation error in below is the result of the above code:
+The above code results in the compilation error below:
 
 ```
 ...
