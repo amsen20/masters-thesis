@@ -5,7 +5,7 @@ This section explains how not following imem rules results in compile errors. Th
 ## Linked List Implementation
 
 The linked list implementation, described in the [imem section](./imem.md), follows the imem static rules.
-This subsection examines two selected parts of the implementation and demonstrates the errors that result from modifying them.
+This subsection examines two selected parts of the implementation and demonstrates the errors that would result from modifying them.
 
 ### Mutable Iterator Reference Owner Set
 
