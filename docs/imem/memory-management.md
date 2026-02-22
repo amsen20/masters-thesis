@@ -178,7 +178,35 @@ Then, the section introduces lifetimes and explains their role in tracking the a
 
 ### Memory With imem References
 
-The program state is the same as the linear program state:
+#### New References
+
+imem introduces new references that make accessing different parts of linear memory easier while preserving memory safety.
+The following is the list of the new references.
+
+##### Box References
+
+A box is a linear value that resembles conventional references, such as a C++ `unique` reference or a Rust `Box` reference.
+A box reference points to a linear or nonlinear location, and the object residing in that location is called the resource in the box.
+Because boxes are linear, they form a tree structure.
+It is important to note that unlike the Rust counterpart, a box in imem does not own its resource, which is discussed in the next [part](#memory-with-imem-references-and-lifetimes).
+
+###### Mutable and Immutable References
+
+Mutable and immutable references are the only way that the program can access a the resource in a box.
+An immutable reference provides read-only access, whereas a mutable reference allows both read and write access.
+To obtain such a reference, the program should first borrow the box.
+Then, the program can access the resource through the interface of the reference.
+
+Immutable references are not linear, so they can be replicated without any restriction.
+In contrast, mutable references are linear.
+
+Both reference types support re-borrowing.
+Because an immutable reference is not a linear value, re-borrowing is equivalent to replicating the immutable reference.
+Also, the program can re-borrow a mutable reference to derive either a new immutable reference or a new mutable reference.
+
+#### Definition
+
+The program state remains the same as the linear program state:
 
 $$
 (\rho, \sigma)
@@ -785,11 +813,27 @@ $$
 This behavior is not aligned with the [Stacked Borrows Model](../background/stacked-borrows.md) because a mutable reference derived from another mutable reference should not remain usable after the first mutable reference is accessed for writing.
 To fix this, imem adds a mechanism to expire \(\texttt{mr}_2\) after writing to \(\texttt{mr}_1\).
 
+#### Overview
+
+An imem memory is a linear memory extended with [additional references](#memory-with-imem-references) and a specific definition of well-formedness.
+In a well-formed memory state, boxes, due to being linear values and imem additional well-formedness properties, form a tree structure.
+
+imem also allows programs to borrow immutable and mutable references from boxes.
+Adding edges from immutable and mutable references to their target locations, the box tree graph becomes a directed acyclic graph.
+The graph remains acyclic because these references do not introduce cycles.
+
+In addition, well-formedness requires that immutable references do not reach mutable references.
+As a result, if an immutable reference is reachable, then it cannot reach any location that a reachable mutable reference targets.
+
+The following diagram demonstrates the reachable part of a well-formed memory:
+
+TODO: A GRAPH OF BOXES, MUTABLE AND IMMUTABL REFERENCES.
+
 ### Memory with imem References And Lifetimes
 
 To address the [discussed issues](#well-formed-but-not-correct), imem must relate the availability of some references to the unavailability of other references.
 For example, borrowing a box mutably should invalidate all immutable references that are borrowed from the same box.
-To achieve this, imem introduces lifetimes and a new type of reference, called a value holder, and augments existing references with lifetime sets.  
+To achieve this, imem introduces lifetimes and a new type of reference, called a value holder, and augments existing references with lifetime sets.
 In addition, lifetimes enable static memory management.
 
 A lifetime is an entity that becomes available once during program execution and then expires.
@@ -992,7 +1036,7 @@ Similar to the previous version, memory well-formedness concerns only the part t
 
 ##### Additional Definitions
 
-The *Resource*, *Reachability*, and *Direct Boxes* definitions remain the same.  
+The *Resource*, *Reachability*, and *Direct Boxes* definitions remain the same.
 The definition of *References Mentioned in a Value* changes slightly by adding value holder references:
 
 $$
@@ -1011,7 +1055,7 @@ $$
 The following presents the new definitions.
 
 ***Availability of References:***
-imem associates a set of lifetimes \(\tau \subseteq \mathcal{L}\) with the references \(\text{box}(l, \tau)\), \(\text{mref}(l, \tau)\), and \(\text{iref}(l, \tau)\).  
+imem associates a set of lifetimes \(\tau \subseteq \mathcal{L}\) with the references \(\text{box}(l, \tau)\), \(\text{mref}(l, \tau)\), and \(\text{iref}(l, \tau)\).
 If any lifetime in \(\tau\) expires, the reference becomes unavailable.
 Formally, a value \(v \in \{ \text{box}(l, \tau), \text{mref}(l, \tau), \text{iref}(l, \tau) \}\) is available iff:
 
@@ -1053,7 +1097,7 @@ x \rightsquigarrow k
 $$
 
 ***Access Expiration:***
-Accessing a reference \(r \in \{\text{box}(l,\_), \text{iref}(l,\_), \text{mref}(l,\_)\}\) expires a lifetime set \(\tau\) if either \(\tau\) is already expired, or every path that starts from an available linear variable and reaches \(r\) passes through a value holder \(\text{hold}(\_, \alpha)\) such that \(\alpha \in \tau\).  
+Accessing a reference \(r \in \{\text{box}(l,\_), \text{iref}(l,\_), \text{mref}(l,\_)\}\) expires a lifetime set \(\tau\) if either \(\tau\) is already expired, or every path that starts from an available linear variable and reaches \(r\) passes through a value holder \(\text{hold}(\_, \alpha)\) such that \(\alpha \in \tau\).
 Formally:
 
 $$
@@ -1138,28 +1182,15 @@ ir \in \text{AR}_{Ref}(\rho,\sigma,\Lambda) \wedge mr \in \text{AR}_{Ref}(\rho,\
 \neg (l_i \to^{*} l_m)
 $$
 
-### Overview
+#### Overview
 
-An imem memory is a linear memory extended with [additional references](#memory-with-imem-references) and [lifetimes](#memory-with-imem-references-and-lifetimes), with a specific definition of [well-formedness](#well-formedness-2).
-In a well-formed imem memory, the structure formed by connecting all available boxes to the values stored at the locations they point to is a tree.
-This structure arises because the *Direct Box Uniqueness* property guarantees that each value is pointed to by exactly one box, and the *No Cyclic Box* property prevents boxes from forming cycles.
-As a result, this structure closely resembles the tree of linear values in a well-formed linear memory.
+imem extends the previous model with [lifetimes](#memory-with-imem-references-and-lifetimes) and value holders, \( \text{hold}(l,\alpha) \).
 
-imem allows programs to borrow immutable and mutable references from boxes.
-When edges from immutable and mutable references to the values at their target locations are added, the tree becomes a directed acyclic graph.
-This graph remains acyclic because references do not introduce cycles.
-Moreover, due to the *No Dangling References* property, following any available reference whose lifetime has not expired never leads to an unavailable reference.
-In addition, every available immutable or mutable reference is ultimately borrowed from an available box, which is ensured by the *Borrowing Validity* property.
+Based on the well-formedness rules, whenever a mutable or immutable reference points to a resource in a box, a value holder points to that box.
+Similarly, whenever an immutable or mutable reference points to the resource of a mutable reference, a value holder points to that mutable reference.
 
-The reaching properties further restrict how references can appear in this graph.
-If a variable points to an available box, then there are no available immutable or mutable references pointing to any location within the subtree of that box.
-If a variable points to an available mutable reference, then accessing the boxes that reach this reference, as well as the mutable references it is borrowed from, necessarily goes through a value holder that expires the mutable reference.
-As a result, there are no mutable or immutable references pointing to any location within the subtree of the box from which the mutable reference is borrowed.
-
-Finally, due to the Immutable Reference Not Reaching Mutable Reference property, if a variable points to an available immutable reference, then no mutable reference points to a location whose value lies in the subtree of the corresponding box.
-Accessing any mutable reference or box that reaches the location targeted by this immutable reference causes the immutable reference to expire.
-
-The following diagram illustrates the available and reachable part of a well-formed imem memory:
+By adding value holders and their connections to the resources they reference to the graph described in the [previous part](#overview-1), the graph remains a DAG.
+The following diagram illustrates the available and reachable parts of a well-formed imem memory:
 
 TODO: ADD A DIAGRAM FOR IMEM MEMORY
 
@@ -1295,6 +1326,6 @@ In this way, all memory regions reachable through references are managed safely 
 
 ## imem Implementation
 
-The Scala library imem enforces static rules to ensure that the part of program memory it manages remains well formed throughout execution.  
+The Scala library imem enforces static rules to ensure that the part of program memory it manages remains well formed throughout execution.
 These static rules include [ownership](./ownership.md) rules and [borrow-checking](./borrow-checking.md) rules.
 Because Scala provides many features that may interfere with these rules, the [soundness](./soundness.md) section presents guidelines that a program must follow to keep its memory well formed.
