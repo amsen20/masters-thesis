@@ -42,7 +42,7 @@ The baseline that is able to implement all the features alongside imem is Rust, 
 - Rust's `take()`, `as_ref()`, and `as_mut()` methods: These are all methods returning `Option<T>`, which makes dealing with Rust's borrow checking easier.
   In contrast, in imem, the program has to use borrowing interfaces to borrow the box pointing to the `Option[Box[T]]` and the box that the option is pointing to, and use `read`, `write` to access their resources.
 - Borrowing non-boxes: In Rust, the `head` field in `List` and the `elem` and `next` fields in `Node` are not `Box`es, but the program is able to have mutable and immutable references to them that are borrow checked.
-  On the hand, imem is only able to have mutable and immutable references to box's resource, as a result the program has to wrap everything in boxes and access them through layer by layer `read`/`write` functions.
+  On the other hand, imem is only able to have mutable and immutable references to resources in boxes. As a result, the program has to wrap everything in boxes and access them through layer by layer `read`/`write` functions.
 - Language support for borrowing and dereferencing: As an example, `&node.elem` expression in Rust, first dereferences `node`, accesses the `elem` field then borrows the reference.
   Because imem does not have any language support, the program have to use the contuniation-passing-style interfaces to dereference the `node`.
 
