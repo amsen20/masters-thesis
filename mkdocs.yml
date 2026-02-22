@@ -44,6 +44,7 @@ nav:
     - Plugin implementation: scinear/plugin-implementation.md
   - Static memory management library `imem`:
     - Overview: imem/index.md
+    - Memory Management: imem/memory-management.md
     - Runtime: imem/runtime.md
     - Ownership: imem/ownership.md
     - Borrow checking: imem/borrow-checking.md
@@ -72,6 +73,7 @@ markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
   - attr_list
+  - mdx_truly_sane_lists
 
 extra_javascript:
   - javascript/mathjax.js
