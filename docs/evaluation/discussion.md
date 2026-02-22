@@ -48,7 +48,7 @@ The baseline that is able to implement all the features alongside imem is Rust, 
 
 The [future works](../conclusion/future-works.md) section explains how small improvements can fill these gaps.
 
-Both Rust and vanilla Scala implementations are short and concise, whereas the Linear Scala implementation is slightly longer, and the imem implementation is significantly longer.
+Both the Rust and the vanilla Scala implementations are short and concise, whereas the Linear Scala implementation is slightly longer, and the imem implementation is significantly longer.
 Linear Scala follows a pattern in which a linear value is decomposed into its fields and then reconstructed so that no field is lost when accessing others.  
 As a result, the code contains many `match` and `case` patterns.
 A similar linear access pattern appears in the imem code because resources are also linear values.
