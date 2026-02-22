@@ -44,7 +44,7 @@ The baseline that is able to implement all the features alongside imem is Rust, 
 - Borrowing non-boxes: In Rust, the `head` field in `List` and the `elem` and `next` fields in `Node` are not `Box`es, but the program is able to have mutable and immutable references to them that are borrow checked.
   On the other hand, imem is only able to have mutable and immutable references to resources in boxes. As a result, the program has to wrap everything in boxes and access them through layer by layer `read`/`write` functions.
 - Language support for borrowing and dereferencing: As an example, the `&node.elem` expression in Rust first dereferences `node`, then accesses the `elem` field, and then borrows the reference.
-  Because imem does not have any language support, the program have to use the contuniation-passing-style interfaces to dereference the `node`.
+  Because imem does not have any language support, the program has to use the continuation-passing-style interfaces to dereference the `node`.
 
 The [future works](../conclusion/future-works.md) explains how small improvements can fill this gaps.
 
