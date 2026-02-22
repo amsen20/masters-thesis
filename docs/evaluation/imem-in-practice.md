@@ -127,7 +127,7 @@ help: consider introducing a named lifetime parameter
 ```
 
 Now let's implement the same function using imem.
-The following implements the `longest` function using imem library:
+The following implements the `longest` function using the imem library:
 
 ```Scala
 def longest[O4^, O1^ >: {O4}, O2^ >: {O4}, O3^ >: {O1, O2}, WC^, MC^](
