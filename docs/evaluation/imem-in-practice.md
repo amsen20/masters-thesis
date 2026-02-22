@@ -201,7 +201,7 @@ list
 ...
 ```
 
-And the following compile error pops up as a result of the program above:
+The program above triggers the following compile error:
 
 ```
 ...
