@@ -221,7 +221,7 @@ def push[T <: scinear.Linear, @caps.use O1^, @caps.use O2^ >: {O1}, @caps.use WC
 
 The function type parameters are similar to those of `isEmptyList`, with a minor change: `O2` must be a superset of `O1`.
 This requirement enables pushing by ensuring that the reference does not outlive the list.
-The `push` function modifies some box's values, so the program signature has to annotate the `WC` type parameter with `@cap.use`.
+The `push` function modifies the values of some of the boxes, so the program signature has to annotate the `WC` type parameter with `@cap.use`.
 The function also takes an additional argument, `elem`, which is the value of the new element that will be pushed onto the list.
 
 The `push` implementation uses another imem interface, `writeWithLinearArg`.
