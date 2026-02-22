@@ -80,7 +80,7 @@ def pop[..., WC^, MC^](...)(
   using ctx: Context[WC, MC]^
 ): ... = ...
 ```
-The following would be the compilation error:
+then the following would be the compilation error:
 
 ```
 [error]     | ...
