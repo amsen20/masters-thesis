@@ -16,7 +16,7 @@ As a result, the linked list can implement all required functionalities, includi
 
 Vanilla Scala uses garbage collection for references and does not provide static memory management.
 Also, vanilla Scala has no definition of mutability through a reference.
-This means enabling `peekMut` and a mutable iterator requires returning a `Node` that exposes the internal structure, which the implementation should avoid if possible.
+This means that enabling `peekMut` and a mutable iterator requires returning a `Node` that exposes the internal structure, which the implementation should avoid if possible.
 
 Linear Scala enforces on linearity, through Scinear plugin, and linearity statically manages memory.
 However, linear memory does not support mutability.
