@@ -26,4 +26,12 @@ MLKit does not target alias or mutability control and does not provide ownership
 It does so by ensuring that some variables own their regions, enforcing separation from other values in their scope.
 This limits cases where the region inference algorithm would otherwise merge objects with different lifetimes, which can lead to memory leaks.
 
-[Pony]()
+[Vale](https://vale.dev/) is a native programming language that provides memory safety through generational references.  
+The memory slots managed by the allocator are augmented with a generation number, which is initially zero for all slots.
+During program execution, each time a slot is freed and later reused for a new value, its generation number is incremented.
+In Vale, references are fat pointers that contain both the memory address and the generation number of the slot at the time the reference is created.
+Whenever a reference is dereferenced, a runtime check verifies that the generation number stored in the reference matches the current generation of the slot.
+This check dynamically prevents use-after-free memory violations.
+Furthermore, Vale also supports linear and region-based patterns to reduce the number of runtime checks.
+Although Vale is a new programming language, it addresses problems similar to those targeted by imem.
+Its dynamic approach to memory safety, which does not rely on garbage collection, can therefore inspire solutions for managing non-statically managed memory in Scala native programs that use imem.

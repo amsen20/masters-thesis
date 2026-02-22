@@ -40,8 +40,6 @@ As a result, there is no static alias management and mutability control.
 A JVM paginated memory allocation runtime is implemented to support this approach that demonstrates that the unchecked version can perform as good as the GC version but with half memory usage.
 imem can also use this runtime to perform memory management in JVM.
 
-
-
 [This report](https://www.researchgate.net/profile/Denys-Shabalin/publication/291105865_Region-based_off-heap_memory_for_Scala/links/6213549a6c472329dcfa8c18/Region-based-off-heap-memory-for-Scala.pdf) presents a [Cyclone-style]([cyclone](./cyc-to-rust.md#cyclone)) region-based memory management approach for Scala on the JVM.
 
 It implements three versions of region-based memory management:
