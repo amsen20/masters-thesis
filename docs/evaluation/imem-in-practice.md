@@ -63,7 +63,7 @@ This borrow occurs during the creation of the mutable iterator and reports that 
 All the functions in the linked list implementation using imem get `WC^` and `MC^` type parameters to instantiate the context instance (`Context[WC, MC]`) type parameters they are getting.
 `WC^` and `MC^` are type parameters instantiated by the write and move capability, respectively.
 
-All the function that include operation that require write access or move access, annotates `WC^` or `MC^` type parameter using `@caps.use` annotation.
+All the functions that include operations that require write access or move access annotate the `WC^` or `MC^` type parameter using `@caps.use` annotation.
 The following is an example of this annotation in `pop` function:
 
 ```Scala
