@@ -38,6 +38,11 @@ All class fields have an internal field, which starts with `_` and is passed as 
 The external field has the same value as the internal field, but its type captures `{this}`.
 This approach for defining fields is necessary for [escape-checking](../background/capturing-types.md#escape-checking) to propagate to the class's fields and to prevent fields from escaping when an instance is bound to a scope.
 
+All classes also have a capture set type parameter `O^`.
+This type parameter, similar to Rust lifetime annotations, is a polymorphic type parameter that is instantiated with the set of lifetimes that form the owner set of the list.
+In other words, all boxes in the list, including the boxes that store list elements, the boxes that point to the next node, and the head box that points to the first node, are available as long as all lifetimes in `O^` are available.
+Therefore, `O^` represents the owner set of the list.
+
 The `LinkedList` class has two type parameters.
 The first parameter is the element type `T`, which must be linear, similar to the linear implementation.
 The second parameter is the owner capture set of the linked list instance, `O^`.
@@ -114,7 +119,15 @@ First, the function signature includes five type parameters:
 
 If `O1^` and `O2^` were the same type parameter, the function could not accept an immutable reference whose lifetime differs from the runtime of the list itself, which is an important use case.
 
-Second, the function takes two arguments. The first argument, `self`, is an immutable reference to the list. The second argument is an implicit parameter, `ctx`, which is the imem `Context` instance.
+Second, the function takes two arguments.
+The first argument, `self`, is an immutable reference to the list.
+The second argument is an implicit parameter, `ctx`, which is the imem `Context` instance.
+
+The function receives an immutable reference to the list because, semantically, `isEmpty` only reads the head of the list to determine whether the list is empty.
+Therefore, passing a mutable reference is unnecessary.
+If a mutable reference were passed, the implementation would remain the same, except that the first `read` operation would be replaced with a `write`.
+Moreover, if the function took the list directly as an argument, then, because a list is a linear value, `isEmpty` would have to return the list instance.
+Otherwise, calling the function would result in losing access to the list.
 
 The function is simple.
 It accesses the list, which is the resource of the `self` reference, through the `read` function.
@@ -391,10 +404,10 @@ After this swap, the temporary box points to the first node, and the list’s he
 Next, the `pop` function accesses the first node and swaps the first node’s box that points to the link that is pointing to the second node with the list’s head.
 After this swap, the temporary box points to the first node, the list’s head points to the remainder of the list without the first node, and the first node points to nothing.
 
-At this point, the node is popped, in runtime overview.
-But the function needs to return a box that points to the element with the requested lifetime, `O3`.
-To do so, the `pop` function dereferences the temporary box and then dereferences the first node to access and move the box that points to the first node’s element.
-As a result, a box that points to the first node's element with the box's lifetime being `O3`, and the function returns it.
+At this point, the first node is removed from the list.
+However, the function must return a box that points to the element with the required lifetime, `O3`.
+Therefore, the `pop` function dereferences the temporary box, then dereferences the first node, and finally moves out the box that points to the first node’s element.
+As a result, the function returns a box that points to the first node’s element, and that box has lifetime `O3`.
 
 The `peek` function implementation in imem is the code that follows:
 
