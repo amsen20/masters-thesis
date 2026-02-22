@@ -49,7 +49,7 @@ once during the construction of `circle` and again in the `main` function.
 Every linear field of a linear class should be exclusively either an internal field or an external field.
 These categories are defined as follows:
 
-- **Internal fields** that other fields refer to in the class body (i.e., during the execution of the constructor).  
+- **Internal fields** that other fields refer to in the class body (i.e., during the execution of the constructor).
 - **External fields** that are referred to from outside the class instance (i.e., through a selector).
 
 This rule manages access scope.
@@ -152,4 +152,4 @@ This rule separates the linear class hierarchy from other types, joining them at
 
 ***Scinear-Nesting-rule:*** Linear class definitions cannot include nested class definitions.
 
-This rule reduces complexity of defining linear classes without sacrificing much practicality.
+This rule reduces the complexity of defining linear classes without sacrificing much practicality.
