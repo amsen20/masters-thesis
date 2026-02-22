@@ -240,7 +240,7 @@ If the list is not empty, an additional step is required.
 First, the function creates a temporary head that points to the new node.
 Then the `push` function swaps the temporary head with the list head.
 Now the list points to the new node, and the temporary head points to the previously first node.
-Finally, the function swaps the temporary head link with the newly created node’s `next` link.
+Finally, the function swaps the temporary head link with the `next` link of the newly created node’.
 This results in the list head pointing to the new node, and the new node pointing to the rest of the list from before the push.
 
 The pop functionality implementation in imem is similar to push:
