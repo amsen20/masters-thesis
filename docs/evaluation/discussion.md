@@ -46,7 +46,7 @@ The baseline that is able to implement all the features alongside imem is Rust, 
 - Language support for borrowing and dereferencing: As an example, the `&node.elem` expression in Rust first dereferences `node`, then accesses the `elem` field, and then borrows the reference.
   Because imem does not have any language support, the program has to use the continuation-passing-style interfaces to dereference the `node`.
 
-The [future works](../conclusion/future-works.md) explains how small improvements can fill this gaps.
+The [future works](../conclusion/future-works.md) section explains how small improvements can fill these gaps.
 
 Both Rust and vanilla Scala implementations are short and concise, whereas the Linear Scala implementation is slightly longer, and the imem implementation is significantly longer.
 Linear Scala follows a pattern in which a linear value is decomposed into its fields and then reconstructed so that no field is lost when accessing others.  
