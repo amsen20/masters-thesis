@@ -918,7 +918,7 @@ To achieve this, the `nextMI` function performs the following steps:
 
 Operations 2 and 3 involve borrowing new mutable references, `nodeElemMutRef` and `nextLinkMutRef`, from the fields of the node reached by the iterator’s box.
 Operation 4 then updates the iterator’s box, `iter.boxToLink`, which the function must access in order to reach the current node.
-As a result, the function must both access the resource held by the iterator’s box, which requires borrowing it and using the `write` function, and update that resource.
+As a result, the function must both access the resource held by the iterator’s box, which requires borrowing it, and update that resource using the `write` function.
 
 <!-- TODO: A DIAGRAM DISPLAYING THE TEMPORARY BOX AFTER SWAP -->
 
