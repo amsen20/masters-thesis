@@ -37,7 +37,7 @@ Linear Scala must follow a pattern in which the program decomposes a linear valu
 As a result, the code contains many `match` and `case` patterns.
 A similar linear access pattern appears in the imem code because resources are also linear values.
 
-The baseline that is able to implement all the features alongside imem is Rust, and the following are the main differences between imem and Rust that makes an imem program longer:
+The baseline that is able to implement all the features alongside imem is Rust, and the following are the main differences between imem and Rust that make an imem program longer:
 
 - Rust's `take()`, `as_ref()`, and `as_mut()` methods: These are all `Option<T>` methods that makes dealing with Rust's borrow checking easier.
   In contrast in imem the program has to use borrowing interfaces to borrow the box pointing to the `Option[Box[T]]` and the box that the option is pointing to, and use `read`, `write` to access their resources.
