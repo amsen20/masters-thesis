@@ -113,7 +113,7 @@ If `O1^` and `O2^` were the same type parameter, the function could not accept a
 Second, the function takes two arguments. The first argument, `self`, is an immutable reference to the list. The second argument is an implicit parameter, `ctx`, which is the imem `Context` instance.
 
 The function is simple.
-It accesses the list, which is the resource of `self` reference, through the `read` function.
+It accesses the list, which is the resource of the `self` reference, through the `read` function.
 Then, a new borrowing lifetime is defined.
 Next, the function borrows the head of the list and accesses the link stored in the head’s `Box` to check whether it is empty.
 Since the lifetime `lf` and the value holder `listHolder` are linear, the program must consume them, which it does using `unlockHolder`.
