@@ -88,7 +88,7 @@ help: consider introducing a named lifetime parameter
   |           ++++     ++          ++          ++
 ```
 
-For comparison, the following is the same mistake's error message in Scala using imem:
+For comparison, the following is the error message for the same mistake made in Scala using imem:
 
 ```
 [error]    | ...
