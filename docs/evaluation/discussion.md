@@ -62,7 +62,7 @@ The following are some of the main differences between imem and Rust that make a
 - **Borrowing non-box values:** In Rust, the `head` field in `List`, as well as the `elem` and `next` fields in `Node`, are not wrapped in `Box<T>`.
   However, the program is able to have borrow-checked mutable and immutable references to these fields.
   In contrast, imem allows mutable and immutable references only to the resources inside boxes.
-  As a result, the program has to wrap all values must in boxes and access them layer by layer using `read` and `write` functions.
+  As a result, the program has to wrap all values in boxes and access them layer by layer using `read` and `write` functions.
 - **Language support for borrowing and dereferencing:** For example, the expression `&node.elem` in Rust first dereferences `node`, then accesses the `elem` field, and finally creates a reference to it.
   Since imem does not provide built-in language support for such operations, dereferencing must happen through using continuation-passing-style interfaces.
 
