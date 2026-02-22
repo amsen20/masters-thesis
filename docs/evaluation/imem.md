@@ -218,7 +218,7 @@ The function also takes an additional argument, `elem`, which is the value of th
 
 The `push` implementation uses another imem interface, `writeWithLinearArg`.
 This interface works like `write`, but it also allows the program to pass linear values to the `writeAction` via an explicit argument.
-This is useful because an anonymous function passed as `writeAction` cannot use linear values available at `writeWithLinearArg`'s' call site's enclosing scope.
+This is useful because an anonymous function passed as `writeAction` cannot use linear values available in the scope that encloses the call site of `writeWithLinearArg`.
 However, in some cases, the program needs to use such linear values, and it is acceptable for the program to expire them after calling `writeWithLinearArg`.
 
 To push a new node onto the list, the program must update the box that the list head link points to, or in Scala terms, `list.head.get`, so that it points to the newly created node.
