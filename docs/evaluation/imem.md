@@ -2,7 +2,7 @@
 
 This section demonstrates how a linked list implementation appears when using the imem library.
 
-The imem library uses capture checking in different parts of the library, and capture checking is currently an experimental compiler feature that is still under development.
+The imem library uses capture checking, which is currently an experimental compiler feature that is still under development.
 As a result, the compiler has limited ability to infer capture set type parameters, and the inference also contains [bugs](TODO) that are inconsistent with the capture checking rules.
 For this reason, this implementation states all type parameters in explicitly.
 This explicit mentioning reduces the expressiveness of the implementation.
