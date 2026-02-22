@@ -45,7 +45,7 @@ The class has a single field, `head`, which is a `Box` containing a `Link`, writ
 Both the `Box` and the `Link` are instantiated with `O`, which makes their lifetimes equal.
 
 A `Link` is an `Option` containing a boxed `Node`, `Option[imem.Box[Node[T, O], O]]`.
-This definition is equivalent to the one Rust version uses, except that `O` instantiates the `Owner^` type parameter of `Box` and the `O^` type parameter of `Node`.
+This definition is equivalent to the one that the Rust version uses, except that `O` instantiates the `Owner^` type parameter of `Box` and the `O^` type parameter of `Node`.
 
 In this version, as in other versions, a node has two fields. One field stores the element that the node references, and the other field points to the next node, if it exists.
 
