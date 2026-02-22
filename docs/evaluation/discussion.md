@@ -39,7 +39,7 @@ A similar linear access pattern appears in the imem code because resources are a
 
 The baseline that is able to implement all the features alongside imem is Rust, and the following are the main differences between imem and Rust that make an imem program longer:
 
-- Rust's `take()`, `as_ref()`, and `as_mut()` methods: These are all `Option<T>` methods that makes dealing with Rust's borrow checking easier.
+- Rust's `take()`, `as_ref()`, and `as_mut()` methods: These are all methods returning `Option<T>`, which makes dealing with Rust's borrow checking easier.
   In contrast in imem the program has to use borrowing interfaces to borrow the box pointing to the `Option[Box[T]]` and the box that the option is pointing to, and use `read`, `write` to access their resources.
 - Borrowing non-boxes: In Rust, the `head` field in `List`, the `elem` and `next` fields in `Node`, all are not `Box`es but the program is able to have mutable and immutable references to them that are borrow checked.
   On the hand, imem is only able to have mutable and immutable references to box's resource, as a result the program has to wrap everything in boxes and access them through layer by layer `read`/`write` functions.
