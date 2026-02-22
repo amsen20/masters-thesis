@@ -126,7 +126,7 @@ help: consider introducing a named lifetime parameter
   |           ++++     ++          ++          ++
 ```
 
-Now lets implement the same function using imem.
+Now let's implement the same function using imem.
 The following implements the `longest` function using imem library:
 
 ```Scala
