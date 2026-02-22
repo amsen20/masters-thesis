@@ -73,7 +73,7 @@ def pop[..., @caps.use WC^, @caps.use MC^](...)(
 ```
 
 The reason for this behavior is that the `pop` function both updates `list.head` and then moves the popped element.
-If the `pop` function does not annotate `WC^` and `MC^` with `@cap.use`, as shown below:
+If the `pop` function did not annotate `WC^` and `MC^` with `@cap.use`, as shown below:
 
 ```Scala
 def pop[..., WC^, MC^](...)(
