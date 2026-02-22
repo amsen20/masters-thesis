@@ -4,18 +4,19 @@ This section details the runtime verification mechanics of the imem library.
 It explains how imem validates operations against the [Stacked Borrows Model](../background/stacked-borrows.md) rules and how the object graph evolves during runtime.
 This section focuses solely on the dynamic behavior of the user-facing components.
 The presented class definitions and interfaces include only their runtime functionality.
-Static mechanisms, such as ownership and borrow checking, and their implementation details are reserved for subsequent sections.
+Static mechanisms, such as [ownership](./ownership.md) and [borrow checking](./borrow-checking.md), and their implementation details are reserved for subsequent sections.
 
 ## Internal components
 
 ### Resource
 
-A resource is an instance of any class for which imem manages access.
+As defined in [memory management section](./memory-management.md#additional-definitions), a resource is an instance of any class for which imem manages access.
 The resource class can be a built-in class, a user-defined class, or a non-private imem class, such as `Box`, `ImmutRef`, or `MutRef`.
 
 ### Unsafe Reference
 
 imem stores each resource in an unsafe reference.
+Storing means that each unsafe reference contains a Scala reference to the resource as a field.
 These unsafe references are the only memory objects that directly refer to a resource.
 In addition, the references are private, so the user never has direct access to them.
 ```Scala
@@ -37,6 +38,9 @@ The `unsafeGet` method returns the resource directly, and imem uses this method 
 
 imem stores each unsafe reference inside an internal reference.
 This internal reference records all accesses to the unsafe reference and ensures that these accesses follow the [Stacked Borrows Model](../background/stacked-borrows.md) rules.
+These accesses include read or write operations, requests for new read or write permissions, and checks on whether a permission remains valid.
+All accesses are performed through the methods of `InternalRef`.
+
 Internal references are mutable and provide an interface for updating the underlying unsafe reference at runtime.
 Similar to unsafe references, internal references are private and inaccessible outside the imem package.
 
@@ -93,12 +97,15 @@ private[imem] class InternalRef[T](private var unsafeRef: UnsafeRef[T]):
 end InternalRef
 ```
 
-`InternalRef` tracks accesses by assigning a distinct tag to each access.
+`InternalRef` tracks accesses by using tags.
+Each tag represents an access point.
+When the program needs to read from or write to the resource, it must present a tag. Then, `InternalRef` checks whether the tag is valid and expires tags that should become unavailable when that access occurs, based on the Stacked Borrows Model.
+
 A tag is of one of two kinds: it is either unique (`Unq`), which permits both read and write access, or shared (`Shr`), which allows read-only access.
 Also, every tag has a unique timestamp, where higher values indicate more recent tags.
 
 Each internal reference maintains a stack of all live tags in `stack.borrows`.
-The `newUnique` and `newShared` methods create a new tag by deriving one from an existing tag.
+The `newUnique` and `newShared` methods create a new tag by deriving it from an existing tag, starting with a root tag created during the internal reference construction.
 These methods check whether the tag holder has permission to request a new tag based on the `NEW-MUTABLE-REF` and `NEW-SHARED-REF-1` rules, respectively, given the current stack state.
 If the check succeeds, the methods return the new tag; otherwise, they throw an `IllegalStateException`.
 
@@ -106,7 +113,7 @@ The `read` and `write` methods perform read and write actions on the resource.
 Before applying an action, these methods call `readCheck` and `useCheck` to determine whether the `READ-1` and `USE-1` rules permit the requested actions.
 If the tag does not have sufficient access permissions or is no longer live, the methods throw an `IllegalStateException`.
 
-Note that rule checks, through `readCheck` and `useCheck`, are impure, meaning that they may change the borrower’s state.
+Note that the rule checks performed by `readCheck` and `useCheck` are impure. In other words, these checks may modify `stack.borrows` by expiring tags that must be popped from the stack according to the Stacked Borrows Model rules.
 
 The `setResource` method updates the underlying resource by creating a new unsafe reference that points to the resource.
 
@@ -119,12 +126,13 @@ The `drop` method clears the stack.
 
 ### Box
 
-A box resembles conventional references, such as a C++ `unique` reference or a Rust `Box` reference.
-`Box` is a linear class. The program can store `Box` instances in other linear types, other boxes, pass them to functions, and borrow them to access their internal resources.  
-However, unlike the Rust counterpart, a box in `imem` does not own its resource, as discussed in the [ownership section](./ownership.md).
+The `Box` class implements the \(\text{box}\) references defined in [memory management section](./memory-management.md#memory-with-imem-references).
+Structurally, a box contains an internal reference and its root tag.
+The root tag has a unique (`Unq`) type, and its timestamp is the smallest.
+As a result, all derived tags have a larger timestamp than the root tag.
 
-Structurally, a box contains a tag and an internal reference.
-The tag has a unique (`Unq`) type, and its timestamp is the smallest.
+The `Box` class provides two functions, `borrowImmutBox` and `borrowMutBox`, which implement \(\mathsf{borrowImmutBox}\) and \(\mathsf{borrowMutBox}\) [operations](./memory-management.md#operations-on-boxes).
+They borrow a box and create, respectively, an immutable or a mutable reference to the resource pointed to by the box.
 During borrowing, the box derives a new tag from its own tag.
 This derivation produces either an immutable or a mutable reference, depending on the borrowing mode.
 
@@ -154,19 +162,7 @@ These operations perform a `useCheck` on the box’s internal reference.
 
 ### Mutable and Immutable References
 
-Mutable and immutable references are the only way that the program can access a box’s underlying resource.
-An immutable reference provides read-only access, whereas a mutable reference allows both read and write access.
-To obtain such a reference, the program should first borrow the box. 
-Then, the program can access the resource through the reference’s interface.
-
-Immutable references are not linear, so they can be replicated without any restriction.
-In contrast, mutable references are linear.
-
-Both reference types support reborrowing.
-For an immutable reference, reborrowing is equivalent to replication.
-However, the program can reborrow a mutable reference to derive either a new immutable reference or a new mutable reference.
-When the program mentions the original mutable reference, the derived reference(s) become unavailable.
-This behavior follows from the rules of the [Stacked Borrows Model](../background/stacked-borrows.md).
+`ImmutRef` and `MutRef` classes implement immutable and mutable references, \(\text{iref}\) and \(\text{mref}\), defined in [memory management](./memory-management.md#memory-with-imem-references):
 
 ```Scala
 class ImmutRef[T, ...](
@@ -191,7 +187,7 @@ def write[... T, ...](self: MutRef[T, ...]^, writeAction: ... ?-> T^ -> S)(...):
 
 Both reference types hold an internal reference and an access tag.
 
-The `borrowImmut` and `borrowMut` functions enable reference reborrowing.
+The `borrowImmut` and `borrowMut` functions enable reference re-borrowing, implementing \(\mathsf{borrowImmut}_{\mathit{imm}}\), \(\mathsf{borrowImmut}_{\mathit{mut}}\) and \(\mathsf{borrowMut}\) [operations](./memory-management.md#program-required-operations).
 The [ownership section](./ownership.md) explains the mechanism that invalidates derived references once the primary mutable reference is used at compile time.
 At runtime, accessing the primary mutable reference removes all derived reference tags from the internal reference's stack.
 
@@ -204,7 +200,7 @@ imem.write[Int, ...](mutRefPrimary, _ => ())
 imem.write[Int, ...](mutRefDerived, _ => ()) // error: `mutRefDerived`'s tag is popped
 ```
 
-Furthermore, `ImmutRef` and `MutRef` provide `read` and `write` interfaces, respectively.
+Furthermore, `ImmutRef` and `MutRef` provide `read` and `write` interfaces, respectively, which implement the \(\mathsf{readImmut}\) and \(\mathsf{writeMut}\) operations.
 These functions follow a continuation-passing style, applying the given action to the resource if the [Stacked Borrows Model](../background/stacked-borrows.md) allows it.
 
 All interfaces perform either a `readCheck` or a `useCheck` on the underlying internal reference, depending on the type of operation.
@@ -276,6 +272,7 @@ The borrow checking section explains why `refMutInner` and `refImmutOuter`, whic
 Imem objects follow the same tree structure as linear objects.
 The following is a demonstration of imem’s memory overview, if the program does not violate imem dynamic verification:
 
+<!-- TODO: MIGHT NEED TO CHANGE IT AND ADD VALUE HOLDERS TO IT -->
 ![Imem Memory Overview with No Static Rules](../img/imem-memory-overview-no-static.png){: width="600"}
 
 This illustration shows only reachable boxes and references whose tags remain in their corresponding internal borrow stacks.
@@ -283,15 +280,3 @@ In other words, the diagram represents the state of live references and boxes at
 Boxes are linear, but they can have borrowed references from other boxes as their resources, so they form a Directed Acyclic Graph, DAG, structure.
 At some nodes in the graph, the program borrows the box either mutably or immutably, yielding a mutable or an immutable reference, respectively.
 
-If a program follows imem’s static rules, it cannot mutably borrow a box that lies within the reachable nodes of another box that is already immutably borrowed.
-This restriction applies when one box can access another box by dereferencing the box to its resource.
-The [borrow checking](./borrow-checking.md) and [ownership](./ownership.md) sections describe this rule and its implications in more detail.
-When the program follows imem static rules, the resulting object graph has the structure as follows:
-
-![Imem Memory Overview with Static Rules](../img/imem-memory-overview.png){: width="450"}
-
-Another difference in the memory layout, when static rules are followed, is that some boxes and references are stored inside linear values rather than directly in variables within the execution scope.
-These linear values are called `ValueHolder`s.
-As the diagram illustrates, each connected component has exactly one box, one mutable reference, or multiple immutable references directly accessible through variables in the current scope.
-When the program unlocks a `ValueHolder`, imem invalidates the previous access point by making the old variable unavailable and then stores the new access point, which may be a box or a reference, in a fresh variable.
-The [borrow checking](./borrow-checking.md) section explains this mechanism in more detail.
