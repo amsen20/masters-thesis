@@ -33,22 +33,6 @@ As a result, similar to Rust, imem supports full functionality, including static
 ## Verbosity
 
 Both the Rust and the vanilla Scala implementations are short and concise, whereas the Linear Scala implementation is slightly longer, and the imem implementation is significantly longer.
-Linear Scala must follow a pattern in which the program decomposes a linear value into its fields and then reconstructs it so that no field is lost when accessing others.
-As a result, the code contains many `match` and `case` patterns.
-A similar linear access pattern appears in the imem code because resources are also linear values.
-
-The baseline that is able to implement all the features alongside imem is Rust, and the following are the main differences between imem and Rust that make an imem program longer:
-
-- Rust's `take()`, `as_ref()`, and `as_mut()` methods: These are all methods returning `Option<T>`, which makes dealing with Rust's borrow checking easier.
-  In contrast, in imem, the program has to use borrowing interfaces to borrow the box pointing to the `Option[Box[T]]` and the box that the option is pointing to, and use `read`, `write` to access their resources.
-- Borrowing non-boxes: In Rust, the `head` field in `List` and the `elem` and `next` fields in `Node` are not `Box`es, but the program is able to have mutable and immutable references to them that are borrow checked.
-  On the other hand, imem is only able to have mutable and immutable references to resources in boxes. As a result, the program has to wrap everything in boxes and access them through layer by layer `read`/`write` functions.
-- Language support for borrowing and dereferencing: As an example, the `&node.elem` expression in Rust first dereferences `node`, then accesses the `elem` field, and then borrows the reference.
-  Because imem does not have any language support, the program has to use the continuation-passing-style interfaces to dereference the `node`.
-
-The [future works](../conclusion/future-works.md) section explains how small improvements can fill these gaps.
-
-Both the Rust and the vanilla Scala implementations are short and concise, whereas the Linear Scala implementation is slightly longer, and the imem implementation is significantly longer.
 Linear Scala follows a pattern in which a linear value is decomposed into its fields and then reconstructed so that no field is lost when accessing others.  
 As a result, the code contains many `match` and `case` patterns.
 A similar linear access pattern appears in the imem code because resources are also linear values.
@@ -67,7 +51,6 @@ The following are some of the main differences between imem and Rust that make a
   Since imem does not provide built-in language support for such operations, dereferencing must happen through using continuation-passing-style interfaces.
 
 The [future works](../conclusion/future-works.md) section explains how small improvements can fill these gaps.
-
 
 ## Error Clarity
 
