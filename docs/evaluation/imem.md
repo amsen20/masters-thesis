@@ -750,7 +750,7 @@ The `iterMut` function takes three type parameters:
 - `O2^`: as in `MutableIterator`, this is the owner set of both the mutable reference and the mutable iterator.
 - `O3^`: the owner set aggregated by the context.
 
-The owner set `O2^` must be a superset of `O1^`, due to the same requirement in `MutableIterator`'s definition.
+The owner set `O2^` must be a superset of `O1^`, due to the same requirement as in the definition of `MutableIterator`.
 It must also be a superset of `O3^` because, during iteration, the program repeatedly borrows list nodes and updates the mutable reference to point to newly borrowed mutable references.
 If the context-aggregated owner set is not a subset of the reference owner set, the [newly borrowed](../imem/borrow-checking.md#context-owner-aggregation) references cannot use `O2^` as their lifetime set.
 
