@@ -205,6 +205,7 @@ TODO: CREATE TWO BOXES WITH TWO LINEAR RESOURCE THAT HAS A FIELD POINTING TO THE
 ```
 
 imem controls only access to a resource in a box, not the resource reaching memory.
+This means that the rest of the memory that the resource reaches is not controlled by imem, unless that memory is itself another box or a box’s resource.
 Therefore, if a program creates multiple resources that point to the same underlying object via Scala references, imem regulates access to those resources, not to the object they point to.
 Managing access to the shared object itself remains the program's responsibility.
 
