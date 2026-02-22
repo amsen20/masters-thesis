@@ -1,11 +1,11 @@
 # imem
 
-This section demonstrates how a linked list implementation appears when using the imem library.
+This section illustrates the use of the imem library using an implementation of the linked list as an example.
 
 The imem library uses capture checking, which is currently an experimental compiler feature that is still under development.
 As a result, the compiler has limited ability to infer capture set type parameters, and the inference also contains [bugs](TODO) that are inconsistent with the capture checking rules.
 For this reason, this implementation states all type parameters in explicitly instead of leaving them to be inferred.
-This explicit mentioning reduces the expressiveness of the implementation.
+This explicit requirement makes imem more difficult to use and results in a more verbose implementation.
 
 ## Internal Structures
 
@@ -31,8 +31,8 @@ object Node:
 end Node
 ```
 
-Similar to the linear implementation, all structures are linear.
-This is because `imem.Box` is linear and a field in all the internal structures' classes.
+Similar to the linear implementation, all internal structures are linear.
+This is because `imem.Box` is linear and is a field of `Node` and `List` classes.
 
 All class fields have an internal field, which starts with `_` and is passed as a constructor argument, and a corresponding external field.
 The external field has the same value as the internal field, but its type captures `{this}`.
@@ -76,6 +76,10 @@ To clarify the imem implementation and its details, this section describes each 
 The following presents the implementation of a helper function, `isEmpty`, which checks whether a list is empty:
 
 ```Scala
+/**
+  * @param O1 The list owner set
+  * @param O2 The list reference (`self`) owner set
+  */
 def isEmptyList[T <: scinear.Linear, @caps.use O1^, @caps.use O2^, WC^, MC^](
   self: ImmutRef[List[T, O1], O2]
 )(
@@ -121,6 +125,10 @@ Since the lifetime `lf` and the value holder `listHolder` are linear, the progra
 The following is the implementation of the push function:
 
 ```Scala
+/**
+  * @param O1 The list owner set
+  * @param O2 The list reference (`self`) owner set
+  */
 def push[T <: scinear.Linear, @caps.use O1^, @caps.use O2^ >: {O1}, @caps.use WC^, MC^](
   self: MutRef[List[T, O1], O2]^,
   elem: T
@@ -238,6 +246,11 @@ This results in the list head pointing to the new node, and the new node pointin
 The pop functionality implementation in imem is similar to push:
 
 ```Scala
+/**
+  * @param O1 The list nodes owner set
+  * @param O2 The list reference (`self`) owner set
+  * @param O3 The returned box owner set (which contains the popped element)
+  */
 def pop[T <: scinear.Linear, @caps.use O1^, @caps.use O2^ >: {O1}, @caps.use O3^ >: {O2}, @caps.use WC^, @caps.use MC^](
   self: MutRef[List[T, O1], O2]
 )(
@@ -366,10 +379,7 @@ After the element is popped, the program can freely move the `Box` to any lifeti
 Also, the function returns an `Option` to a `Box` to an element.
 The `Box` lifetime capture set is `O3`.
 
-To pop an element from the list, the program must update the box that the list head link points to, or in Scala terms, `list.head.get`, so that it points to the list's second node, and also it should return a box pointing to the first node's element.
-To preserve the only one direct box requirement of imem memory well-formedness, the first node's next link should no longer point to the second node.
-
-To pop an element from the list, the program must update the box that the head link points to, in Scala terms `list.head.get`, so that it points to the second node, and the function must return a box that points to the first node’s element.
+To pop an element from the list, the program must update the box that the head link points to, in Scala terms, `list.head.get`, so that it points to the second node, and the function must return a box that points to the first node’s element.
 To preserve the imem memory well-formedness requirement of having only one direct box, the first node’s next link must no longer point to the second node.
 
 <!-- TODO: A DIAGRAM OF HOW THE BOXES SHOULD CHANGE DURING POPPING STEP BY STEP (3 STEPS) -->
@@ -389,6 +399,12 @@ As a result, a box that points to the first node's element with the box's lifeti
 The `peek` function implementation in imem is the code that follows:
 
 ```Scala
+/**
+  * @param O1 The list nodes owner set
+  * @param O2 The list reference (`self`) owner set
+  * @param O3 The context owner set, i.e. the context aggregated set of owners
+  * @param O4 The returned reference owner set (which contains the peeked element)
+  */
 def peek[T <: scinear.Linear, @caps.use O1^, @caps.use O2^, O3^, O4Key, @caps.use O4^ >: {O1, O2, O3}, WC^, MC^](
   self: ImmutRef[List[T, O1], O2]
 )(
@@ -453,6 +469,12 @@ Finally, it borrows the box pointing to the first node and accesses the box that
 The implementation of `peekMut` follows the same structure as `peek`:
 
 ```Scala
+/**
+  * @param O1 The list nodes owner set
+  * @param O2 The list reference (`self`) owner set
+  * @param O3 The context owner set, i.e. the context aggregated set of owners
+  * @param O4 The returned reference owner set (which contains the peeked element)
+  */
 def peekMut[T <: scinear.Linear, @caps.use O1^, O2^, O3^, O4Key, @caps.use O4^ >: {O1, O2, O3}, @caps.use WC^, MC^](
   self: MutRef[List[T, O1], O2]
 )(
@@ -518,6 +540,9 @@ Both consuming and mutable iterators can be implemented in imem.
 The following is the class definition of a consuming iterator in imem:
 
 ```Scala
+/**
+  * @param O The consuming iterator owner set
+  */
 class ConsumingIterator[T <: scinear.Linear, O^](_list: Box[List[T, O], O]) extends scinear.Linear:
 	val list: Box[List[T, O], O]^{this} = _list
 end ConsumingIterator
@@ -531,6 +556,10 @@ The iterator stores the list in a box that has the same lifetime as the list.
 The following shows the implementation of the “has next” functionality:
 
 ```Scala
+/**
+  * @param O1 The consuming iterator owner set
+  * @param O2 The reference to the consuming iterator (`self`) owner set
+  */
 def hasNextCI[T <: scinear.Linear, @caps.use O1^, @caps.use O2^ >: {O1}, WC^, MC^](
   self: ImmutRef[ConsumingIterator[T, O1], O2]^
 )(
@@ -563,6 +592,10 @@ Finally, it returns the result.
 The `nextCI` function's signature is similar:
 
 ```Scala
+/**	
+	* @param O1 The consuming iterator owner set
+	* @param O2 The reference to the consuming iterator (`self`) owner set
+	*/
 def nextCI[T <: scinear.Linear, @caps.use O1^, @caps.use O2^ >: {O1}, @caps.use WC^, @caps.use MC^](
   self: MutRef[ConsumingIterator[T, O1], O2]^
 )(
@@ -627,6 +660,10 @@ To change the lifetime set of the popped box from `{O2, ctx}` to `{O2}`, the fun
 The `intoIter` function creates a new consuming iterator:
 
 ```Scala
+/**
+  * @param O1 The list and the box to the list (`self`) owner set
+  * @param O2 The consuming iterator owner set
+  */
 def intoIter[T <: scinear.Linear, @caps.use O1^, O2^, WC^, @caps.use MC^](
   self: Box[List[T, O1], O1]
 )(
@@ -652,11 +689,16 @@ The important thing about the signature is that the list and its box's lifetime 
 Furthermore `O1^` and `O2^` have no relation with each other.
 
 The `intoIter` function moves all of the list's element from the `O1` lifetime set to the `O2` lifetime set to match the return argument.
-This would be unneccasry of both of the given list and the iterator had the same lifetime as the list, but that would made the list less expressive by not allowing consuming iterators to actually consume a list, by changing their lifetime.
+This is unnecessary if the consumed list and the consuming iterator both use the list’s lifetime parameter.
+However, tying the consuming iterator to the list’s lifetime parameter makes the implementation less expressive, because a consuming iterator should be able to have its own lifetime while it consumes the list and later returns its elements one by one, regardless of the lifetime of the consumed list.
 
-The `moveAllElems` function does the elements moving:
+The `moveAllElems` function moves the elements:
 
 ```Scala
+/**
+  * @param O1 The list and the box to the list (`self`) owner set
+  * @param O2 The target owner set to move the list to
+  */
 def moveAllElems[T <: scinear.Linear, @caps.use O1^, O2^, WC^, @caps.use MC^](
   self: Box[Link[T, O1], O1]^
 )(
@@ -703,9 +745,13 @@ The function recursively traverses the nodes by dereferencing the boxes, moves t
 
 ### Mutable iterator
 
-The following presents the definition of the mutable reference class:
+The following presents the definition of the mutable iterator class:
 
 ```Scala
+/**
+  * @param O1 The list to be iterated owner set
+  * @param O2 The mutable iterator and the mutable reference to the list owner set
+  */
 class MutableIterator[T <: scinear.Linear, O1^, O2^ >: {O1}](_boxToLink: Box[MutRef[Link[T, O1], O2], O2]) extends scinear.Linear:
   val boxToLink: Box[MutRef[Link[T, O1], O2], O2]^{this} = _boxToLink
 end MutableIterator
@@ -727,6 +773,11 @@ Since `O2^` is a superset of `O1^`, this condition is equivalent to the expirati
 The `iterMut` function provides an interface to create a mutable iterator from a mutable reference to a list:
 
 ```Scala
+/**
+  * @param O1 The list to be iterated owner set
+  * @param O2 The mutable reference to the list (`self`) and the resulting mutable iterator owner set
+  * @param O3 The context owner set, i.e. the context aggregated set of owners
+  */
 def iterMut[T <: scinear.Linear, @caps.use O1^, O3^, O2^ >: {O1, O3}, @caps.use WC^, MC^](
   self: MutRef[List[T, O1], O2]
 )(
@@ -758,6 +809,11 @@ The function takes a mutable reference to the list and returns a mutable iterato
 To construct this mutable reference, the function accesses the list, borrows its head link to the first node, and creates a new box that points to the borrowed head reference.
 
 ```Scala
+/**
+  * @param O1 The list to be iterated owner set
+  * @param O2 The mutable iterator owner set
+  * @param O3 The reference to the mutable iterator (`self`) owner set
+  */
 def hasNextMI[T <: scinear.Linear, @caps.use O1^, O3^, @caps.use O2^ >: {O1, O3}, WC^, MC^](
   self: ImmutRef[MutableIterator[T, O1, O2], O3]^
 )(
@@ -814,6 +870,11 @@ Because the reference to the link is mutable and the function avoids using the `
 The `nextMI` function's implementation is a bit tricky:
 
 ```Scala
+/**
+	* @param O1 The list to be iterated owner set
+	* @param O2 The mutable iterator owner set
+	* @param O3 The reference to the mutable iterator (`self`) owner set
+	*/
 def nextMI[T <: scinear.Linear, @caps.use O1^, O3^, @caps.use O2^ >: {O1, O3}, @caps.use WC^, MC^](
   self: MutRef[MutableIterator[T, O1, O2], O3]^
 )(
