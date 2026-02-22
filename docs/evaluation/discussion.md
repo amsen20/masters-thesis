@@ -32,7 +32,7 @@ As a result, similar to Rust, imem supports full functionality, including static
 
 ## Verbosity
 
-Both Rust and vanilla Scala implementations are short and concise, whereas the Linear Scala implementation is slightly longer, and the imem implementation is significantly longer.
+Both the Rust and the vanilla Scala implementations are short and concise, whereas the Linear Scala implementation is slightly longer, and the imem implementation is significantly longer.
 Linear Scala must follow a pattern in which the program decomposes a linear value into its fields and then reconstructs it so that no field is lost when accessing others.
 As a result, the code contains many `match` and `case` patterns.
 A similar linear access pattern appears in the imem code because resources are also linear values.
