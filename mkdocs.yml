@@ -23,7 +23,9 @@ plugins:
 # Navigation (Table of Contents)
 nav:
   - Home: index.md
-  - Introduction: introduction/index.md
+  - Introduction:
+      - Introduction: introduction/index.md
+      - Motivation: introduction/motivation.md
   - Background:
     - Overview: background/index.md
     - Linear types: background/linear-types.md
