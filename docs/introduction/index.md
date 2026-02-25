@@ -27,7 +27,7 @@ Also, Scala Native users currently do not have the alias and mutability control 
 
 imem enables Rust-style ownership rules and borrow checking in Scala as only a library.
 To support this design, imem also depends on a minimal compiler plugin, [Scinear](../scinear/index.md), which adds [linear types](../background/linear-types.md) to Scala.
-imem illustrates that the Scala type system, together with the recent addition of [capture checking](../background/capturing-types.md), is expressive enough that linearity is the remaining feature needed to implement the whole Rust-style ownership and borrow checking as a library.
+imem illustrates that the Scala type system, together with the recent addition of [capture checking](../background/capturing-types.md), is expressive enough that linearity is the only remaining feature needed, and that all the rest of Rust-style ownership and borrow checking can be implemented as a library.
 
 This thesis presents the following:
 
