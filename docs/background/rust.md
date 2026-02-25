@@ -99,7 +99,7 @@ The borrow checker ensures the following properties by reasoning about reference
 - The value that a reference points to should not be dropped, meaning that there are no dangling pointers.
 
 The first goal is to ensure static mutability control by preventing the existence of a mutable reference together with another mutable reference or with immutable references at the same time.
-In the example above, at the point where the lifetime of `r2`, an immutable reference, begins, the lifetime of `r1`, a mutable reference, ends.
+In the example above, at the point where the lifetime of the immutable reference `r2` begins, the lifetime of the mutable reference `r1` ends.
 
 The second goal of the borrow checker is to ensure that no dangling pointers exist at any point during execution.
 To achieve this goal, Rust enforces a stricter rule regarding reference lifetimes: a reference lifetime must lie within the non-lexical scope in which the owner of the value at the time of borrowing remains the owner of that value.
