@@ -27,7 +27,7 @@ let y = & mut *x; // re-borrow `x` to create `y`
 *y = 2; // error: `y` used after `x` got used!
 ```
 
-Second, based on Stacked Borrows Model, when an immutable reference is borrowed from a referent, which can be a value owner, a mutable reference, or another immutable reference:
+Second, based on the Stacked Borrows Model, when an immutable reference is borrowed from a referent, which can be a value owner, a mutable reference, or another immutable reference:
 *every use of the immutable reference (and everything derived from it) must occur before the next mutating use of the referent (after the reference got created), and moreover the reference must not be used for mutation.*
 
 ```Rust
