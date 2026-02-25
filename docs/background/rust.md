@@ -5,7 +5,7 @@ This section provides a brief introduction to Rust’s static ownership rules an
 
 ## Ownership
 
-Rust's enforces the following static ownership rules:
+Rust enforces the following static ownership rules:
 
 - Each value in Rust has a variable that’s called its owner.
 - There can only be one owner at a time.
