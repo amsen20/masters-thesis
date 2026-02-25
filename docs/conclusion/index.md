@@ -2,7 +2,7 @@
 
 This thesis outlined [Scinear](../scinear/index.md), [imem](../imem/index.md), and a [case study](../evaluation/index.md) that demonstrates imem capabilities.
 
-The thesis presented that adding linear types to the Scala type system, and combining linearity with polymorphism and capture checking, lays the foundation for a library that enforces ownership and borrowing rules statically.
+The thesis showed that adding linear types to the Scala type system, and combining linearity with polymorphism and capture checking, lays the foundation for a library that enforces ownership and borrowing rules statically.
 This approach avoids extending the type system with features that target ownership and borrowing as a special case.
 Therefore, enabling Rust-style static memory management and alias control in Scala does not require foundational changes to the type system, and it can be implemented as a library.
 
