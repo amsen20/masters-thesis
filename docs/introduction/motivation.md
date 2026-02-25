@@ -29,7 +29,7 @@ In this case, when the zone goes out of scope, the queue is automatically freed.
 However, this approach leads to a memory leak.
 The popped links, which the program prints, are no longer needed, but they remain allocated in the zone, and they are not freed individually and remain in memory until the entire zone, and therefore the whole queue, is released.
 
-The following demonstrates the simplified version of the same program that uses imem:
+The following demonstrates a simplified version of the same program that uses imem:
 
 ```Scala
 def crawl[OQ^, ...](toCrawlLinks: Box[Queue[String, OQ^], OQ], shouldStop: Boolean)(...): Unit =
