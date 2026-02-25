@@ -9,7 +9,7 @@ This section focuses only on a subset of this model.
 
 ## Overview
 
-Based on the reference overview, Rust’s [borrow checker](https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html) enforces a couple of rules for mutable and immutable aliases, which achieves the [borrow checker](./rust.md#borrowing)'s first goal that at each point of execution, the program has access to either one mutable reference or multiple immutable references for a value at the same time.
+Based on the reference overview, Rust’s [borrow checker](https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html) enforces a couple of rules for mutable and immutable aliases, which achieve the [borrow checker](./rust.md#borrowing)'s first goal that at each point of execution, the program has access to either one mutable reference or multiple immutable references for a value at the same time.
 The Stacked Borrows model restates those rules to achieve the same goal without depending on lifetimes.
 
 First, in the Stacked Borrows model, when a mutable reference is borrowed from a referent, which can be a value owner or another mutable reference:
