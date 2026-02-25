@@ -45,7 +45,7 @@ A capture set `C1 = {c11, c12, ..., c1n}` sub-captures another capture set `C2 =
 - `c ∈ C2`, or
 - the type of `c` has a capture set `C'` such that `C' <: C2`.
 
-As an expected result, every capture set sub-captures the capture set that contains the universal capability, `{cap}`.
+As an expected result, every capture set sub-captures any capture set that contains the universal capability, `{cap}`.
 
 ## Capture Set Type Parameters
 
