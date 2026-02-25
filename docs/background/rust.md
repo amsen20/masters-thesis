@@ -93,7 +93,7 @@ fn main() {
 In the example above, the lifetimes of both references, `r1` and `r2`, which are `'b` and `'c`, lie within the non-lexical scope in which `s` owns the string, namely `'a`.
 In addition, the lifetime `'b` of the mutable reference `r1` ends before the lifetime `'c` of the immutable reference `r2` begins.
 
-The borrow checker ensures the following properties by reasoning about references lifetimes statically:
+The borrow checker ensures the following properties by reasoning about reference lifetimes statically:
 
 - At any given time, the program can have either one mutable reference or any number of immutable references to a value, which limits aliasing.
 - The value that a reference points to should not be dropped, meaning there is no dangling pointers.
