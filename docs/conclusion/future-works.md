@@ -9,7 +9,7 @@ In addition, the proof should target imem correctness for safe static memory man
 The proof also has to address alias and mutability control by proving mutual exclusion of mutable access to resources.
 
 imem implementations tend to be long, and they can include loopholes.
-Both issues can be mitigated by using Scala meta programming, as described in the [foundational paper](https://dl.acm.org/doi/abs/10.1145/2489837.2489840) and in [Scala 3 guide](https://docs.scala-lang.org/scala3/guides/migration/compatibility-metaprogramming.html), and by adding more helper functions to the imem interface.
+Both issues can be mitigated by using Scala meta programming, as described in the [foundational paper](https://dl.acm.org/doi/abs/10.1145/2489837.2489840) and in the [Scala 3 guide](https://docs.scala-lang.org/scala3/guides/migration/compatibility-metaprogramming.html), and by adding more helper functions to the imem interface.
 Scala macros can enforce common patterns.
 For example, macros can enforce the borrowing pattern that introduces a lifetime `Owner` and `Key` type members in borrowing-interface calls, which makes avoiding loopholes easier.
 In addition, small but useful operations such as writing, setting, and swapping a box resource directly, without repetitive borrowings, can significantly reduce duplication in codebases that use imem.
