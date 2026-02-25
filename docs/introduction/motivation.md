@@ -1,7 +1,7 @@
 # Motivation
 
-This example is a minimal version of the web-crawlers benchmark presented in [this](https://github.com/amsen20/web-crawlers-bench/tree/main) project, which exposed the garbage-collection performance problem in Scala Native to me.
-The following program implements a simple, single-threaded web crawler in Scala:
+The following example is a minimal version of the web-crawlers benchmark presented in the [Web Crawlers Bench project](https://github.com/amsen20/web-crawlers-bench/tree/main) project, which identified performance problems in Scala Native caused by garbage collection.
+The program below implements a simple, single-threaded web crawler in Scala:
 
 ```Scala
 def crawl(toCrawlLinks: Queue[String], shouldStop: Boolean): Unit =
@@ -24,8 +24,12 @@ The Scala Native garbage collector scans the entire linked list at each GC pause
 Because the linked list continues to grow, the duration of each pause also increases over time.
 This behavior leads to longer pauses and a reduction in Scala Native performance.
 
-One way to prevent these pauses is to use [Scala Zones](https://github.com/scala-native/scala-native/pull/3120) and allocate the queue inside a zone.
-In this case, when the zone goes out of scope, the queue is automatically freed.
+One way to prevent these pauses is to use [Scala Zones](https://github.com/scala-native/scala-native/pull/3120) and allocate the queue inside a zone.  
+The zone is defined before calling `crawl`.
+When the initial value of `toCrawlLinks` is allocated, it is explicitly specified that the queue must be allocated in that zone.
+As a result, all elements of the queue, meaning the nodes of the underlying linked list, are allocated in the same zone as the initial queue value.
+
+In the case that a zone is used to allocate the queue, the queue and its elements are automatically freed when the zone goes out of scope.
 However, this approach leads to a memory leak.
 The popped links, which the program prints, are no longer needed, but they remain allocated in the zone, and they are not freed individually and remain in memory until the entire zone, and therefore the whole queue, is released.
 
@@ -81,7 +85,7 @@ When the program unlocks the holder using `unlockHolder(lf.getKey(), queueBoxHol
 Then, the program can no longer mention the mutable reference and all other objects that include `lf` in their lifetime set, and they can be freed.
 This behavior enables imem to give temporary access to the box resource through mutable or immutable references, and then return the box while also invalidating the borrowed references.
 
-After borrowing `toCrawlLinks`, the program re-borrows as `queueRefForDequeue` because `queueMutRef` is linear and the function needs access twice.
+After borrowing `toCrawlLinks`, the program re-borrows `queueMutRef` as `queueRefForDequeue` because `queueMutRef` is linear and the function needs access twice.
 One use is for popping from the queue, and the other use is for pushing to the queue.
 Similarly, the `borrowMut` function returns a value holder, `queueMutRefHolder`, which holds the mutable reference `queueMutRef` as long as `lf2` is available.
 
