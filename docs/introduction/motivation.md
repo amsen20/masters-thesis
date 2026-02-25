@@ -60,7 +60,7 @@ The implementation details of what imem interfaces are and how to use them are e
 The following explains the example briefly.
 
 The program accesses the queue through a `Box`.
-[Boxes](../imem/ownership.md), similar to [Rust](../background/rust.md)’s boxes, are references that imem controls the program access to them statically.
+[Boxes](../imem/ownership.md), similar to [Rust](../background/rust.md)’s boxes, are references to which imem controls program access statically.
 imem enforces static ownership and borrowing rules for accessing a box.
 The `Box` and the `Queue` data structure both take `OQ^` as a type parameter.
 `OQ^` is similar to Rust’s lifetime annotations.
