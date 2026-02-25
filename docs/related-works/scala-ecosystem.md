@@ -26,7 +26,7 @@ Safe zones use a `nativelib` memory pool to manage zone and object allocations a
 Three versions of region based memory management are implemented:
 
 - **Unchecked:**
-  most performant version that doesn't do any static or dynamic check to ensure no dangling pointers exists.
+This is the most performant version that doesn't do any static or dynamic checks to ensure that no dangling pointers exist.
 - **Dynamic:**
   In this version, the memory accesses are dynamically checked to make sure that the allocated page exists.
 - **Static:**
