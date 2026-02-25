@@ -70,7 +70,7 @@ In the definition of `f` above, `CS^` is a capture set type parameter that can b
 
 This explicit form gives the program more control over capture set polymorphism.
 Because they are explicit, it is possible to enforce specific relationships between these parameters.
-In addition, the program can specifies lower and upper bounds for them.
+In addition, the program can specify lower and upper bounds for them.
 The following examples demonstrate how to enforce that `CS^` always includes the `fs` capability:
 
 ```Scala
