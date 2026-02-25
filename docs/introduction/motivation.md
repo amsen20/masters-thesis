@@ -57,7 +57,7 @@ def crawl[OQ^, ...](toCrawlLinks: Box[Queue[String, OQ^], OQ], shouldStop: Boole
 ```
 
 The implementation details of what imem interfaces are and how to use them are explained thoroughly in the [imem](../imem/index.md) and [evaluation](../imem/index.md) chapters.
-The following explains the example in short.
+The following explains the example briefly.
 
 The program accesses the queue through a `Box`.
 [Boxes](../imem/ownership.md), similar to [Rust](../background/rust.md)’s boxes, are references that imem controls the program access to them statically.
