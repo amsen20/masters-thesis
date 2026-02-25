@@ -70,7 +70,7 @@ The function first checks whether it should stop.
 If execution should stop, the function uses `foreach` to print all links that remain in the queue.
 
 If execution should not stop, the function defines a new lifetime `lf`.
-This lifetime is the lifetime of the mutable reference that the program borrows to access the queue through `toCrawlLinks`.
+This is the lifetime of the mutable reference that the program borrows to access the queue through `toCrawlLinks`.
 imem does not allow direct access to a box referent, which is called a resource.
 Instead, the program has to borrow the box, either immutably or mutably, and then access the box resource through the borrowed references.
 
