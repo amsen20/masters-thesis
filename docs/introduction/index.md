@@ -21,7 +21,7 @@ In 2016, Scala also entered systems-level programming by supporting a [native](h
 Scala historically relies on the JVM and its garbage collection for memory management.
 Scala Native instead relies on configurable third-party garbage collectors designed for LLVM languages, namely [Boehm-Demers-Weiser](https://www.hboehm.info/gc/) and [Immix](https://www.steveblackburn.org/pubs/papers/immix-pldi-2008.pdf).
 
-The motivation [example](./motivation.md) demonstrates that these garbage collectors, combined with functional programming paradigms such as immutability, can perform poorly without high-level language support.
+The motivating [example](./motivation.md) demonstrates that these garbage collectors, combined with functional programming paradigms such as immutability, can perform poorly without high-level language support.
 Furthermore, even a well-configured garbage collector can still have performance problems that static memory management would resolve.
 Also, Scala Native users currently do not have the alias and mutability control that Rust provides.
 
