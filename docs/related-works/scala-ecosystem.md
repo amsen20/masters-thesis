@@ -23,7 +23,7 @@ Safe zones use a `nativelib` memory pool to manage zone and object allocations a
 
 [This report](https://www.researchgate.net/profile/Denys-Shabalin/publication/291105865_Region-based_off-heap_memory_for_Scala/links/6213549a6c472329dcfa8c18/Region-based-off-heap-memory-for-Scala.pdf) implements a [cyclone](./cyc-to-rust.md#cyclone) style region-based memory management in Scala targeting JVM.
 
-Three version of region based memory management is implemented:
+Three versions of region based memory management are implemented:
 
 - **Unchecked:**
   most performant version that doesn't do any static or dynamic check to ensure no dangling pointers exists.
