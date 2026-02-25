@@ -40,4 +40,4 @@ This thesis presents the following:
   imem defines boxes and immutable and mutable references, and it provides borrowing interfaces to borrow boxes immutably and mutably.
   The library enforces static memory-safety rules and alias and mutability control in the portion of memory that all boxes point to.
 
-- A case study that implements safe linked lists to demonstrate imem capabilities and compare imem with Rust, vanilla Scala, and Scala with linearity rules.
+- A case study that implements safe linked lists to demonstrate the capabilities of imem and to compare imem with Rust, vanilla Scala, and Scala with linearity rules.
