@@ -1,6 +1,6 @@
 # Surrounding Projects in Scala
 
-This section focuses on attempts in Scala ecosystem that target static and safe memory management.
+This section focuses on attempts in the Scala ecosystem that target static and safe memory management.
 
 ## Scala Safe Zones
 
