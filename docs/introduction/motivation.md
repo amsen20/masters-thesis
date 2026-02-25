@@ -62,7 +62,7 @@ The following explains the example briefly.
 The program accesses the queue through a `Box`.
 [Boxes](../imem/ownership.md), similar to [Rust](../background/rust.md)’s boxes, are references that imem controls the program access to them statically.
 imem enforces static ownership and borrowing rules for accessing a box.
-This `Box` and the `Queue` data structure both take `OQ^` as a type parameter.
+The `Box` and the `Queue` data structure both take `OQ^` as a type parameter.
 `OQ^` is similar to Rust’s lifetime annotations.
 It indicates that both the box and the queue to which it points remain valid as long as all lifetime capabilities in the set that instantiates `OQ^` are available.
 
