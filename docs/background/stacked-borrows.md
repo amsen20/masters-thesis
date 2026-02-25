@@ -3,8 +3,12 @@
 [Stacked Borrows](https://plv.mpi-sws.org/rustbelt/stacked-borrows/paper.pdf) is an aliasing model for [Rust](./rust.md) programs.
 It is a dynamic model that ensures that memory accesses follow the borrowing semantics that are statically enforced by the borrow checker.
 The Stacked Borrows model tracks memory accesses without relying on reasoning about lifetimes.
+
 The main motivation for this model is to validate Rust `unsafe` programs at runtime.
-For this purpose, [Miri](https://github.com/rust-lang/miri) utilizes the model for alias validation.
+A Rust `unsafe` program can violate borrowing and ownership rules without getting into compiler errors.
+In most cases, `unsafe` Rust is used to implement low-level data structures, such as doubly linked lists and atomic data structures, which are either impossible to implement under Rust’s ownership and borrowing rules or significantly less efficient when those rules are strictly followed.
+
+[Miri](https://github.com/rust-lang/miri), a Rust interpreter that detects Undefined Behavior at runtime, uses the Stacked Borrows Model for alias validation.
 This section focuses only on a subset of this model.
 
 ## Overview
@@ -73,18 +77,25 @@ When the program allocates a new location in memory, the stack associated with t
 
 ## Rules
 
+To give an overview, each memory location is annotated with a stack.
+This stack contains tags, and each tag represents an active reference that the program has to that location.
+A $\text{Shared}$ tag represents an immutable reference, and a $\text{Unique}$ tag represents a mutable reference.
+Each reference, and the tag that represents it, has a unique ID, so there is a one-to-one mapping between references and their associated tags.
+If a reference ID is not present in the stack associated with the location that the reference points to, that reference is no longer active.
+Then, if the program tries to access that location through the reference, the model rejects the access.
+
 The following rules are enforced by the Stacked Borrows model to validate memory accesses and the creation of new mutable or immutable references.
 Only the rules that are relevant to imem are presented in this section.
 
-***NEW-MUTABLE-REF:***
-Any time the program creates a new mutable reference, using `&mut expr`, from some existing pointer value $\text{Pointer}(l,t)$, the referent, first of all this is considered a use of that pointer value (so the model follows **USE-1** below).
-Then consider some fresh pointer ID $t'$.
-The new reference gets value $\text{Pointer}(l,t')$, and the model pushes $\text{Unique}(t')$ on top of the stack for $l$.
-
 ***USE-1:***
-Any time the program uses a pointer value $\text{Pointer(l,t)}$ mutably, a tag with pointer ID $t$ must be in the stack for $l$.
-If there are other tags above it, pop them, so that the tag with ID $t$ is on top of the stack afterwards.
-If $\text{Unique(t)}$ is not in the stack at all, this program has undefined behavior.
+When the program uses a pointer value \( \text{Pointer}(l, t) \) mutably, the stack for \(l\) must contain \( \text{Unique}(t) \).
+If \( \text{Unique}(t) \) is not present in the stack for \(l\), the mutable access to this location is not valid.
+If there are tags above \( \text{Unique}(t) \), the program must pop them until \( \text{Unique}(t) \) becomes the top of the stack.
+
+***NEW-MUTABLE-REF:***
+When the program creates a new mutable reference using `&mut expr` from an existing pointer value \( \text{Pointer}(l, t) \), the mutable access to location \(l\) must be valid according to rule **USE-1**.
+Let \(t'\) be a fresh pointer ID.
+The new reference value is \( \text{Pointer}(l, t') \), and the program must push \( \text{Unique}(t') \) on top of the stack for \(l\).
 
 The following examples demonstrate how the stack associated with a location changes according to the *NEW-MUTABLE-REF* rule, and how the model validates memory accesses according to the *USE-1* rule:
 
@@ -104,14 +115,15 @@ let y = &mut *x; // re-borrows `x` mutably using NEW-MUTABLE-REF, resulting in `
 *y = 2; // attempts to use `y` via USE-1, causing error because `Unique(2)` is not in the stack
 ```
 
-***NEW-SHARED-REF-1:***
-Any time the program creates a new immutable reference, using `&expr`, from some existing pointer value $\text{Pointer(l,t)}$, first of all this is considered a read access to that pointer value, so the model follows **READ-1** below.
-Then consider some fresh pointer ID $t'$, use $\text{Pointer(l,t')}$ as the value for the shared reference, and add $\text{Shared}(t)$ to the top of the stack for $l$.
-
 ***READ-1:***
-Any time the program reads a pointer with value $\text{Pointer(l,t)}$, a tag with pointer ID $t$ must exist in the stack for $l$.
-Pop items off the stack until all the tags above the tag with ID $t$ are $\text{Shared}(_)$.
-If no such tag exists in the stack, the program violates the stack principle.
+When the program reads a pointer with value \( \text{Pointer}(l, t) \), the stack for \(l\) must contain a tag with pointer ID \(t\).
+If no such tag exists in the stack for \(l\), the read access to this location is not valid.
+If there are tags above the tag with ID \(t\), the program must pop tags until all tags above the tag with ID \(t\) are \( \text{Shared}(\_) \).
+
+***NEW-SHARED-REF-1:***
+When the program creates a new immutable reference using `&expr` from an existing pointer value \( \text{Pointer}(l, t) \), the read access to location \(l\) must be valid according to rule **READ-1**.
+Let \(t'\) be a fresh pointer ID.
+The new reference value is \( \text{Pointer}(l, t') \), and the program must push \( \text{Shared}(t') \) on top of the stack for \(l\).
 
 The following examples demonstrate how the stack associated with a location changes according to the *NEW-MUTABLE-REF* and *NEW-SHARED-REF-1* rules, and how the model validates memory accesses according to *USE-1* and *READ-1* rules:
 
@@ -143,6 +155,10 @@ let val = *ir2; // reads `ir2` via READ-1, `Shared(3)` is at the top
 let val = *ir1; // attempts to read `ir1` via READ-1, causing error because `Shared(2)` is not in the stack
 // Stack: [ Unique(0), Unique(1) ] -> UNDEFINED BEHAVIOR
 ```
+
+After the rules are applied, each stack starts, from bottom to top, with a unique tag that represents the owner of the location.
+This tag is followed by a sequence of other unique tags, which represent mutable references that are each borrowed from the previous mutable reference.
+The stack can continue with a set of shared tags, which represent immutable references that are borrowed either from the top unique tag or from other immutable references.
 
 ## imem
 

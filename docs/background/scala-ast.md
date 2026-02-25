@@ -11,43 +11,29 @@ The AST becomes typed after the typer phase and retains Scala type information u
 
 Scinear is a compiler plugin that processes the AST after the `cc` phase, which performs capture checking and annotates types with capture information, and before the `erasure` phase.
 
-## Traversing AST
+## AST Nodes
 
-The following presents the list of all AST nodes and the order in which their children are traversed in the context of Scinear.
-This order is a partial order, which means that, for some nodes, there is no specific order among their children.  
-Applying this to the AST of a program produces a directed acyclic graph (DAG).
-This DAG represents the traversal order that Scinear uses to enforce the linearity rules.
+The following is the list of AST nodes that Scinear supports:
 
-Sequential Ordered Nodes:
-
-- **`Util.Call`**: first `ref`, then arguments (`arg1`, ..., `argN`) in argument order after flattening.
-- **`Util.NewExpr`**: arguments (`arg1`, ..., `argN`) in argument order after flattening.
-- **`tpd.Block`**: first statements (`stat1`, ..., `statN`) in program order, then `expr`.
-- **`tpd.SeqLiteral`**: elements (`elem1`, ..., `elemN`) in program order.
-- **`tpd.CaseDef`**: first `pat`, then `guard`, then `body`.
-- **`tpd.TypeDef` (linear)**: template statements (`stat1`, ..., `statN`) in program order.
-
-Branching Nodes:
-
-- **`tpd.If`**: first `cond`, then `thenp` and `elsep`, no order between `thenp` and `elsep`.
-- **`tpd.Match`**: first `selector`, then cases, `case1`, ..., `caseN`, no order among cases.
-- **`tpd.TypeDef` (non-linear)**: template statements, `stat1`, ..., `statN`, independently, no order among them.
-- **`tpd.Try`**: first `block`, then cases, `case1`, ..., `caseN`, no order among cases, then `finalizer` after `block` and all `cases`.
-
-The following AST nodes each have a single child; therefore, the traversal order is trivial:
-
-- `tpd.Select`: `qualifier`
-- `tpd.Typed`: `expr`
-- `tpd.NamedArg`: `arg`
-- `tpd.Assign`: `rhs`
-- `tpd.Annotated`: `arg`
-- `tpd.Return`: `expr`
-- `tpd.Labeled`: `expr`
-- `tpd.Inlined`: `expansion`
-- `tpd.ValDef`: `rhs`
-
-The following nodes isolate some of their children.
-Therefore, these children appear as independent sources in the ordering DAG:  
-
-- `tpd.WhileDo`: the `cond` and `body` children are isolated; therefore, both are sources of the DAG.  
-- `tpd.DefDef`, `tpd.ClosureDef`, `Util.PolyFun`: the `rhs` child is isolated and thus a source of the DAG.
+- **`tpd.ValDef`**: A value definition, such as `val name = rhs`.
+- **`tpd.DefDef`**: A method or function definition, such as `def name(param1, ..., paramN) = rhs`.
+- **`tpd.Block`**: A block expression `{ stat1; ...; statN; expr }`.
+- **`tpd.If`**: A conditional expression `if cond then thenp else elsep`.
+- **`tpd.Match`**: A pattern-match expression `selector match { case1 ... caseN }`.
+- **`tpd.CaseDef`**: A single case clause `case pat if guard => body` inside a match expression.
+- **`tpd.Try`**: A try-catch-finally expression `try block catch { case1 ... caseN } finally finalizer`.
+- **`tpd.Assign`**: A variable assignment `x = rhs`.
+- **`tpd.WhileDo`**: A while loop `while cond do body`.
+- **`tpd.Select`**: A field or method selection `qualifier.member`.
+- **`tpd.Typed`**: A type ascription `expr: T`, where the expression is explicitly annotated with a type.
+- **`tpd.SeqLiteral`**: A sequence literal `[elem1, ..., elemN]`.
+- **`tpd.NamedArg`**: A named argument in a function call, such as `name(x = arg)`.
+- **`tpd.Annotated`**: An annotated expression `arg: @annotation`.
+- **`tpd.Return`**: A return statement `return expr`.
+- **`tpd.Labeled`**: A labeled expression used to represent named blocks that can be exited early.
+- **`tpd.Inlined(expansion)`**: An inlined expression that results from macro expansion, where `expansion` is the inlined body.
+- **`tpd.TypeDef`**: A type or class definition, such as `class name { stat1; ...; statN }`.
+- **`Util.Call`**: A function or method call `ref(arg1, ..., argN)`, where `ref` is the function reference and the arguments are flattened.
+- **`Util.NewExpr`**: An object instantiation `new TypeName(arg1, ..., argN)`.
+- **`Util.PolyFun`**: A polymorphic function literal, such as `[TypeNameT] => rhs`.
+- **`tpd.ClosureDef`**: A closure or anonymous function definition, such as `name => rhs`.

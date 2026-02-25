@@ -89,11 +89,11 @@ val aAnn: AAnn^{fs} = ...
 val bAnn: AAnn^ = ann // ok
 
 val aParam: AParam[{fs}] = ...
-val bParam: AParam[{cap}] = ap // error 
+val bParam: AParam[{cap}] = aParam // error 
 ```
 
-In the example above, the `Ann` instance `ann` can be assigned to `bnn` without any issue, because `{fs} <: {cap}`.
-However, the `AParam[{fs}]` instance in `ap` cannot be assigned to `bp` because the type parameter is not covariant.
+In the example above, the `AAnn` instance `aAnn` can be assigned to `bAnn` without any issue, because `{fs} <: {cap}`.
+However, the `AParam[{fs}]` instance in `aParam` cannot be assigned to `bParam` because the type parameter is not covariant.
 
 To inform the typer that a function body uses a capability referenced by a capture set type parameter, the function must annotate that type parameter with `@caps.use`.
 This annotation is similar to including the capture set type parameter in the function’s own capture set.
@@ -113,14 +113,14 @@ However, `T` can be instantiated with `S`, in which case `T^` becomes `S^`.
 For example, consider the following:
 
 ```Scala
-def withFs(body: Filesystem^ => T): T = ...
+def withFs[T](body: Filesystem^ => T): T = ...
 
 withFs(fs => () => fs.write()) // error
 ```
 
 At the use site of `withFs`, `T` is instantiated with `() ->{fs} Unit`.
 Since `fs` is not defined in the scope of `T`, the typer replaces it with the smallest superset of `{fs}`, which is `cap`.
-This process is called [tunnelling](https://docs.scala-lang.org/scala3/reference/experimental/cc.html#capture-tunnelling).
+The process of replacing a capture set with the smallest non-local superset of it is called [avoidance](https://docs.scala-lang.org/scala3/reference/experimental/cc.html#subtyping-and-subcapturing).
 As a result, `T` is instantiated with `() ->{cap} Unit`, which captures `cap` and is therefore not allowed.
 
 This mechanism enables a functionality called escape checking.
@@ -147,8 +147,8 @@ For example, in the following definition, if an instance of `MyPair` is bound to
 
 ```Scala
 class MyPair[T, S](_first: T, _second: S):
-  val first: T^{this} = first
-  val second: S^{this} = second
+  val first: T^{this} = _first
+  val second: S^{this} = _second
 ```
 
 The fields `first` and `second` are not defined directly as constructor arguments because `this` is not available in the scope of the constructor parameters.

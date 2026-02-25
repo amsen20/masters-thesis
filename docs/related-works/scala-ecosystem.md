@@ -21,37 +21,18 @@ Safe zones use a `nativelib` memory pool to manage zone and object allocations a
 
 ## Region-based Off-heap Memory For Scala
 
-[This report](https://www.researchgate.net/profile/Denys-Shabalin/publication/291105865_Region-based_off-heap_memory_for_Scala/links/6213549a6c472329dcfa8c18/Region-based-off-heap-memory-for-Scala.pdf) implements a [cyclone](./cyc-to-rust.md#cyclone) style region-based memory management in Scala targeting JVM.
-
-Three versions of region based memory management are implemented:
-
-- **Unchecked:**
-This is the most performant version that doesn't do any static or dynamic checks to ensure that no dangling pointers exist.
-- **Dynamic:**
-  In this version, the memory accesses are dynamically checked to make sure that the allocated page exists.
-- **Static:**
-  Using literal-based singleton types, each region is assigned a unique type and using macros all field accesses and instances of the off-heap classes are ensured to have an implicit instance of that region.
-  In this way statically there cannot be any dangling references although the program has to open and close the regions.
-
-Similar to Safe zones, compared to imem, this research targets a simpler problem.
-This approach does model ownership and borrowing.
-As a result, there is no static alias management and mutability control.
-
-A JVM paginated memory allocation runtime is implemented to support this approach that demonstrates that the unchecked version can perform as good as the GC version but with half memory usage.
-imem can also use this runtime to perform memory management in JVM.
-
 [This report](https://www.researchgate.net/profile/Denys-Shabalin/publication/291105865_Region-based_off-heap_memory_for_Scala/links/6213549a6c472329dcfa8c18/Region-based-off-heap-memory-for-Scala.pdf) presents a [Cyclone-style]([cyclone](./cyc-to-rust.md#cyclone)) region-based memory management approach for Scala on the JVM.
 
 It implements three versions of region-based memory management:
 
 - **Unchecked:**
-  The most performant version, with no static or dynamic checks to prevent dangling pointers.
+  This is the most performant version, with no static or dynamic checks to prevent dangling pointers.
 
 - **Dynamic:**
-  Performs runtime checks on memory accesses to ensure the addressed page exists.
+  The dynamic version performs runtime checks on memory accesses to ensure the addressed page exists.
 
 - **Static:**
-  Uses literal-based singleton types to assign a unique type to each region.
+  This version uses literal-based singleton types to assign a unique type to each region.
   With macros, all field accesses of off-heap classes require an implicit instance of the corresponding region.
   This guarantees, at compile time, that no dangling references exist, although regions must still be explicitly opened and closed.
 

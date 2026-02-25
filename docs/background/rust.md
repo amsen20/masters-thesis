@@ -8,7 +8,7 @@ This section provides a brief introduction to Rust’s static ownership rules an
 Rust enforces the following static ownership rules:
 
 - Each value in Rust has a variable that’s called its owner.
-- There can only be one owner at a time.
+- There can only be one owner for each value at a time.
 - When the owner goes out of scope, the value will be dropped.
 
 In the following example, `s1` is the owner of its value, which is a string `"hello"` in the heap:

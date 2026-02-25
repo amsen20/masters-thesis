@@ -12,7 +12,7 @@ When an expression mentions a linear variable, the expression is using the varia
 The following rules limit the usage of linear variables in a program.
 
 ***Scinear-usage-at-most-rule:*** 
-For each linear variable $l$ and any node $u$ that uses $l$, no node $v$ preceding $u$ in the [AST traversal order](../background/scala-ast.md#traversing-ast) may use $l$.
+For each linear variable $l$ and any node $u$ that uses $l$, no node $v$ preceding $u$ in the [AST traversal order](./plugin-implementation.md#traversing-ast) may use $l$.
 
 To put it another way, after a linear variable is used, it expires.
 Keep in mind that the AST traversal order is a partial order.
