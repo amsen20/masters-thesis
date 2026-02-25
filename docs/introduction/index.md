@@ -16,7 +16,7 @@ Rust provides alias and mutability control through its borrow checker.
 
 Scala is a language that supports both object-oriented and functional programming.
 Alongside that, Scala also provides a safe and strict static type system with strong theoretical foundations.
-In 2016, Scala has also entered systems-level programming by supporting a [native](https://scala-native.org/en/latest/index.html) output that emits LLVM IR.
+In 2016, Scala also entered systems-level programming by supporting a [native](https://scala-native.org/en/latest/index.html) output backend that emits LLVM IR.
 
 Scala historically relies on the JVM and its garbage collection for memory management.
 Scala Native instead relies on configurable third-party garbage collectors designed for LLVM languages, namely [Boehm-Demers-Weiser](https://www.hboehm.info/gc/) and [Immix](https://www.steveblackburn.org/pubs/papers/immix-pldi-2008.pdf).
