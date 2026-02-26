@@ -11,7 +11,7 @@ The second pass applies rules that are specific to Scinear.
 
 ## Traversing AST
 
-The following section presents most of AST nodes that Scinear supports and specifies the order in which Scinear traverses their children.
+The following section presents most of the AST nodes that Scinear supports and specifies the order in which Scinear traverses their children.
 This order is a partial order, which means that, for some nodes, there is no specific order among their children.  
 Applying this to the AST of a program produces a directed acyclic graph (DAG).
 This DAG represents the traversal order that Scinear uses to enforce the linearity rule.
