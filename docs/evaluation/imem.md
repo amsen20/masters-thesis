@@ -3,7 +3,7 @@
 This section illustrates the use of the imem library using an implementation of the linked list as an example.
 
 The imem library uses capture checking, which is currently an experimental compiler feature that is still under development.
-As a result, the compiler has limited ability to infer capture set type parameters, and the inference also contains [bugs](TODO) that are inconsistent with the capture checking rules.
+As a result, the compiler has limited ability to infer capture set type parameters, and the inference also contains bugs that are inconsistent with the capture checking rules.
 For this reason, this implementation states all type parameters in explicitly instead of leaving them to be inferred.
 This explicit requirement makes imem more difficult to use and results in a more verbose implementation.
 
@@ -61,7 +61,6 @@ The `next` field of `Node` is a `Box` that points to a `Link`, with `O` as its o
 
 Finally, as in the linear version, since `Node` is a linear class with two fields, an `unapply` method is allows access to both fields of a node.
 
-<!-- TODO: Move this to comparison -->
 It is important to note the difference between Rust’s `List` and `Node` fields and their counterparts in imem.
 The imem version wraps the fields in an additional `Box` compared to Rust.
 
@@ -72,7 +71,6 @@ To support a similar mechanism, the imem guidelines advise wrapping every field 
 Since boxes are the source of statically controlled mutability in imem, this approach allows the program to mutate the fields of an object when the program has a mutable reference to the object.
 
 As a result, the implementation of user interface functions becomes slightly more complex.
-<!-- TODO: Move this to comparison -->
 
 ## User Interface
 
