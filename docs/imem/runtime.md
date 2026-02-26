@@ -270,7 +270,7 @@ The borrow checking section explains why `refMutInner` and `refImmutOuter`, whic
 ## Object Graph
 
 Imem objects follow the same tree structure as linear objects.
-The following is a demonstration of imem’s memory overview, if the program does not violate imem dynamic verification:
+The following is a demonstration of imem’s memory overview, if the program does not violate imem dynamic verification, and scinear rules:
 
 <!-- TODO: MIGHT NEED TO CHANGE IT AND ADD VALUE HOLDERS TO IT -->
 ![Imem Memory Overview with No Static Rules](../img/imem-memory-overview-no-static.png){: width="600"}
@@ -279,4 +279,3 @@ This illustration shows only reachable boxes and references whose tags remain in
 In other words, the diagram represents the state of live references and boxes at a specific point during the program’s execution.
 Boxes are linear, but they can have borrowed references from other boxes as their resources, so they form a Directed Acyclic Graph, DAG, structure.
 At some nodes in the graph, the program borrows the box either mutably or immutably, yielding a mutable or an immutable reference, respectively.
-

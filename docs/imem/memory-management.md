@@ -157,7 +157,6 @@ The notion of safety is defined as follows:
 
 Based on linearity rules, each linear variable is mentioned exactly once in the program.
 Therefore, each variable is either used in another expression or safely freed, resulting in no memory leaks and enabling static memory management for linear data structures.
-<!-- TODO: Link to a paper on memory management of linear types -->
 
 ### Effect of `@HideLinearity`
 

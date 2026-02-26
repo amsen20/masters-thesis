@@ -181,10 +181,22 @@ In the Lifetime class, `Key` is an opaque type member.
 The only way to obtain an instance of this type is through the `getKey` method of `Lifetime` because the type is opaque outside the class.
 At the same time, because `Key` is a type member, each instance of type `Lifetime` has its own [path-dependent](../background/dependent-types.md) `Key` type that is unique to that instance.
 
-As shown below, a `ValueHolder[lf.Key, ...]` can only be opened by `lf` and by no other lifetime.
+As shown below, a `ValueHolder[lf1.Key, ...]` can only be opened by `lf1` and by no other lifetime.
 
 ```Scala
-TODO: A EXAMPLE OF VALUEHOLDER[LF.KEY, ...]
+val lf1 = Lifetime[{}]()
+val lf2 = Lifetime[{}]()
+
+val holder = ValueHolder[lf1.Key, String]("My Secured Resource") // locked with `lf1`'s key
+
+val illegalAccess = unlockHolder(lf2.getKey(), holder)
+//                                             ^^^^^^
+// Found:    (holder : imem.ValueHolder[lf1.Key, String])
+// Required: imem.ValueHolder[KeyType, T]^
+// where:    KeyType is a type variable with constraint >: lf2.Key
+//           T       is a type variable
+
+val okAccess = unlockHolder(lf1.getKey(), holder) // ok
 ```
 
 ### Borrowing and Holder Results
@@ -217,10 +229,27 @@ All borrowing functions return a pair.
 The first element of the pair is the borrowed reference, and the second element is a value holder locked with the `newOwnerKey` type parameter and storing a value of the same type as the `self` parameter.
 The `T` type parameter of the value holder is instantiated with the type of `self`, which captures `self` in case `self` is subject to [escape checking](../background/capturing-types.md#escape-checking).
 
-The following example demonstrates how a program can borrow a reference from another reference and then retrieve the original reference:
+The following example demonstrates how a program can borrow a reference from a box and then retrieve the original box:
 
 ```Scala
-TODO: AN EXAMPLE THAT STARTS WITH DEFINING A LIFETIME, THE BORROWING A BOX, AND RETRIEVING IT. THE SAME FOR A MUTABLE REFERENCE.
+// a new lifetime to borrow `box`
+// the owner set of the new lifetime for borrowing the `box` should be a superset of the `box` owner set, which is `{lfBox}`
+val lfRef = Lifetime[{lfBox}]()
+
+// borrow `box` immutably
+val (immutRef, boxHolder) = borrowImmutBox[LinearInt, {lfBox}, ..., lfRef.Key, lfRef.Owners, ...](box)
+
+// the program cannot access the `box` here:
+// box <--- error: Linear value box is being used twice, or is not accessed directly.
+
+// the program has access to `immutRef` here:
+immutRef // ok
+
+// unlock `boxHolder` using `lfRef`'s key to retrieve the original `box`
+val retrievedBox = unlockHolder(lfRef.getKey(), boxHolder)
+
+// immutRef <--- error: Linear value lfRef is mentioned in the type of immutRef but is either not in scope or used already.
+retrievedBox // ok, we have the original box back
 ```
 
 The program borrows a box or a reference using `lf.Owners` as the owners of the borrowed reference and `lf.Key` as the locking key for the holder.
@@ -252,8 +281,19 @@ This access is escape-checked because the `T^` parameter captures the universal 
 At the same time, the return type `S` does not capture the argument, which prevents the action from leaking or storing the resource beyond its scope.
 The `read` function returns the result produced by the action.
 
+The example below illustrate how the program can borrow a box to access its resource:
+
 ```Scala
-TODO: AN EXAMPLE WHER AN IMMUTABLE REFERENCE BORROWED AND THEN IS USED BY READ FUNCTION TO PRINT THE Int RESOURCE INSIDE IT.
+// borrow the `box` immutably
+val (immutRef, boxHolder) = borrowImmutBox[LinearInt, {boxLf}, ..., lf.Key, lf.Owners, ...](box)
+
+// access the `immutRef` resource, which is `LinearInt`
+read[LinearInt, lf.Owners, Unit, ...](
+  immutRef,
+  resource =>
+    // `resource` is escape-checked and can only be used in this scope
+    println(resource.value)
+)
 ```
 
 The `write` function follows the same structure as the `read` function.
@@ -270,19 +310,73 @@ More precisely, the following restrictions apply.
 
 ***Inside `write`’s `writeAction`:***
 The program must not be able to call `moveBox` or `derefForMoving`.
-Allowing these operations could produce references or boxes that point to a moved box, which violates the *One direct box* goal.
+Allowing these operations could produce references or boxes that point to a moved box, which violates the *Direct Box Uniqueness* property.
+The example below demonstrates that allowing moving while accessing a box resource can violate well-formedness properties:
 
 ```Scala
-TODO: AN EXAMPLE WHEN INSIDE A WROTE A BOX IS MOVED AND THEN THE MOVED BOX HAVE TWO BOXES POINTING TO IT.
+val outerBox = newBox[Box[LinearInt, {lf1}], {lf1}](newBox(LinearInt(42)))
+
+// new lifetime to borrow the `outerBox`
+val lfRef = Lifetime[{lf1}]()
+
+// borrow the `outerBox` mutably to access its resource, which is the inner box
+val (mutRef, boxHolder) = borrowMutBox[Box[LinearInt, {lf1}], {lf1}, ..., lfRef.Key, lfRef.Owners, ...](outerBox)
+
+// accessing the inner box
+val movedInnerBox = write[Box[LinearInt, {lf1}], lfRef.Owners, Box[LinearInt, {lf2}], ...](
+  mutRef,
+  innerBox =>
+    // moving the inner box and returning it
+    moveBox[LinearInt, {lf1}, {lf2}, ...](innerBox) // !
+)
+
+// unlock the `boxHolder` using `lfRef`'s key to retrieve the original `outerBox`
+val retrievedOuterBox = unlockHolder(lfRef.getKey(), boxHolder)
+
+movedInnerBox // ok to access
+retrievedOuterBox // ok to access
+// Both `movedInnerBox` and resource of the `retrievedOuterBox`, which is the inner box, point to the same underlying, the same `LinearInt` instance.
 ```
 
 ***Inside `read`’s `readAction`:***
 As with `writeAction`, the program must not be able to call `moveBox` or `derefForMoving`.
 In addition, the program must not be able to call `setBox` or `swapBox`, because these operations would modify a box while it is reachable through an immutable reference, which violates the *Immutable reference constant view* goal.
 For the same reason, the program must not be able to call `borrowMutBox`, `borrowMut`, or `write`, since these operations could create a mutable reference to a resource that is already reachable through an immutable reference.
+The following example demonstrates that permitting mutation and mutable borrowing in `readAction` can lead to non-well-formed memory:
 
 ```Scala
-TODO: AN EXAMPLE OF MODYFING A BOX INSIDE READ SCOPE CAUSING PROBLEM. ALSO MUTABLY BORROW A BOX INSIDE READ AND RETURNING IT CAUSING IMMUTABLE REFERNCE REACHING MUTABLE difference
+val outerBox = newBox[Box[LinearInt, {lf1}], {lf1}](newBox(LinearInt(42)))
+
+// new lifetime to borrow the `outerBox`
+val lfRef = Lifetime[{lf1}]()
+
+// borrow the `outerBox` immutably to access its resource
+val (immutRef, _) = borrowImmutBox[Box[LinearInt, {lf1}], {lf1}, ..., lfRef.Key, lfRef.Owners, ...](outerBox)
+
+// accessing the resource of `immutRef`, which is the inner box
+read[Box[LinearInt, {lf1}], lfRef.Owners, Unit, ...](
+  immutRef,
+  innerBox =>
+    // modify the inner box's resource while it is reachable through an immutable reference
+    setBox[LinearInt, {lf1}, ...](innerBox, LinearInt(99)) // ! violates *Immutable reference constant view*
+)
+
+// accessing the resource of `immutRef`, which is the inner box
+val returnedMutRef = read[Box[LinearInt, {lf1}], lfRef.Owners, MutRef[LinearInt, lfRef.Owners], ...](
+  immutRef,
+  innerBox =>
+    // borrow the `innerBox` mutably
+    val (innerMutRef, _) = borrowMutBox[LinearInt, {lf1}, ..., lfRef.Key, lfRef.Owners, ...](innerBox) // !
+
+    // return the mutable reference
+    innerMutRef
+)
+
+immutRef // ok to access
+returnedMutRef // ok to access
+// Both `immutRef` and `returnedMutRef` are now available in the same scope.
+// The immutable reference `immutRef` reaches the same `LinearInt` instance that `returnedMutRef` can reach and mutate.
+// This violates the *Immutable Reference not reaching Mutable Reference* property.
 ```
 
 The following table summarizes the scopes and the actions permitted within them:
@@ -329,11 +423,6 @@ def withImem[T](block: [@caps.use WC^, MC^] => Context[WC, MC]^ => T): T =
 ```
 
 This function defines the capabilities, instantiates a context, and calls the program entry point.
-
-```Scala
-TODO: A SIMPLE PROGRAM ENTRY POINT
-```
-
 Each imem interface receives a `Context` instance as an implicit argument:
 
 ```Scala
@@ -384,10 +473,27 @@ def derefForMoving[... T, Owner^, ctxOwner^, ... S, WC^, @caps.use MC^](
 
 Each action is annotated with the set of access capabilities it may use.
 In this way, as described in [access control](../background/capturing-types.md#access-control), the program can, in each scope, call only the interfaces that imem's annotations permit for that scope.
+The codeblock below shows that the capture checking results in an error if the program uses `setBox` inside `readAction`:
 
 ```Scala
-TODO: AN EXAMPLE WHERE YOU CAN DO BORROWIMMUT IN READ BUT YOU CANNOT DO BORROWMUT.
+// access the outer box's resource, the inner box, through a read operation on a immutable reference borrowed from the outer box
+read[Box[LinearInt, {lf}], lfRef.Owners, Unit, ..., WC, MC](
+  immutRef,
+  innerBoxResource => setBox(innerBoxResource, LinearInt(42))
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// Found:    (contextual$1: imem.Context[WC, MC]^?) ?->{WC}
+//   imem.Box[scinear.utils.LinearInt^?, {lf}]^? ->{contextual$1, WC} Unit
+// Required: (imem.Context[WC, MC]^{lf, ctx, lfRef}) ?->{lf, ctx, lfRef}
+//   imem.Box[scinear.utils.LinearInt, {lf}]^ ->{lf, ctx, lfRef} Unit
+// ...
+//==> subcaptures {WC} <:< {O1, ctx, lfRef} in open varState
+//  ==> {O1, ctx, lfRef} accountsFor WC  = false
+//  ==> {O1, ctx, lfRef} accountsFor cap  = false
+// ...
+)
 ```
+
+In the error message above, the compiler reports an error because the capability `{WC}` is not included in `{O1, ctx, lfRef}`, which is the capture set of the function.
 
 ## Reference Owner Aggregation
 
@@ -400,12 +506,35 @@ By implementing [Box and Reference Holding](#box-and-reference-holding), imem en
 As a result, accessing any of these boxes or references expires the references that appear above it on the borrow stack.
 
 However, this mechanism is not sufficient when the program contains nested boxes and references that point to different boxes, where one box reaches another.
-In the following example, accessing the outer reference through its holder should expire the inner reference;
+In the following example, accessing the outer box through its holder should expire the mutable reference to the inner box;
 otherwise, the *Stacked Borrows* invariant is violated.
 
 ```Scala
-TODO: AN EXAMPLE OF NESTED BOXES WHERE THE OUTER BOX IS BORROWED MOUTABLY AND THEN THE INNER BOX IS BORROWED MUTABLY AND ACCESSING THE OUTER REFERENCE SHOULD EXPIRE THE INNER REFERECNE, CHECK THE MENTION BELOW
+// new lifetime to borrow `outerBox` mutably
+val lfOuter = Lifetime[lfBox.Owners]()
+
+// borrow `outerBox` mutably
+val (outerMut, outerHolder) = borrowMutBox[Box[LinearInt, {lfBox}], {lfBox}, ..., lfOuter.Key, lfOuter.Owners, {WC}, {MC}](outerBox)
+
+// new lifetime to borrow the inner box mutably
+val lfInner = Lifetime[lfBox.Owners]()
+
+// access resource of `outerMut`, which is the inner box, and borrow it mutably
+val innerMut = write[Box[LinearInt, {lfBox}], lfOuter.Owners, MutRef[LinearInt, lfInner.Owners], ..., {WC}, {MC}](
+  outerMut,
+  innerBox =>
+    // borrowing the inner box mutably
+    borrowMutBox[LinearInt, {ctx}, ..., lfInner.Key, lfInner.Owners, {WC}, {MC}](innerBox)._1 // ?
+)
+
+// unlock the `outerHolder` to retrieve the `outerBox` again
+val retrievedOuterBox = unlockHolder(lfOuter.getKey(), outerHolder)
+
+innerMut // can the program access `innerMut` here?
 ```
+
+In the example above, if the code compiles without errors, then the program can access the inner box resource, namely the `LinearInt` instance, both through the borrowed `retrievedOuterBox` and by performing a `write` operation on `innerMut`.
+This behavior violates the *Stacked Borrows* properties.
 
 ### Owner Aggregation
 
@@ -421,10 +550,18 @@ $$
 O' \supseteq O \cup \bigcup_{i=1}^{n} O_i
 $$
 
-As a consequence, in the following example, accessing the mutable reference to the outer box causes the reference to the inner box to expire.
+As a consequence, in the corrected version of the previous example shown below, accessing the outer box causes the mutable reference to the inner box to expire.
 
 ```Scala
-TODO: SHOW THAT THIS EXPIRATION HAPPENS
+...
+// new lifetime to borrow the inner box mutably
+val lfInner = Lifetime[{lfBox, lfOuter}]() // the reference owner aggregation
+                                           // requires that the owner set of
+                                           // the inner reference be a superset
+                                           // of the owner set of `outerMut`,
+                                           // namely `{lfBox, lfOuter}`.
+...
+innerMut // error: Linear value lfOuter is mentioned in the type of innerMut but is either not in scope or used already.
 ```
 
 ### Context Owner Aggregation
@@ -496,3 +633,9 @@ def borrowImmut[... T, Owner^, ctxOwner^, newOwnerKey, newOwner^ >: {ctxOwner, O
 ```
 
 Based on these two features, the context carries the union of the owners of all references used to reach a given program point, and the owners of any newly created reference are a superset of this aggregated set.
+
+## Object Graph
+
+The following diagram illustrates the object graph described in [the runtime section](./runtime.md#object-graph), extended by introducing value holders as linear values and enforcing ownership and borrow-checking rules.
+
+![Imem Memory Overview](../img/imem-memory-overview.png){: width="600"}
