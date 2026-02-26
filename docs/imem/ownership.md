@@ -34,16 +34,48 @@ end Lifetime
 The `Lifetime` class takes the `OwnersInput^` capture-set type parameter, which represents the lifetime capabilities that own this lifetime and therefore outlive it.
 The class also includes an `Owners^` type member, which denotes the list of the lifetime’s owners together with the lifetime capability itself.
 The following illustrates how to define a lifetime and use it:
+
 ```Scala
-TODO: A LIFETIME DEFINITION, USAGE, AND THE SCOPE
+val lf = Lifetime[{}]() // region of `lf` begins
+// `lf` is available here
+lf.consume() // region of `lf` begins
+// `lf` is not available anymore
 ```
+
 Lifetimes can also be structured in a nested manner:
+
 ```Scala
-TODO: TWO NESTED LIFETIMES
+val outerLf = Lifetime[{}]() // region of `outerLf` begins
+val innerLf = Lifetime[outerLf.Owners]() // region of `innerLf` begins
+// both `outerLf` and `innerLf` are available here
+innerLf.consume() // region of `innerLf` ends
+// `outerLf` is still available here
+outerLf.consume() // region of `outerLf` ends
+// neither are available anymore
 ```
+
 The program can also define and use lifetimes intertwined as long as they do not own each other:
+
+```Scala
+val lf1 = Lifetime[{}]() // region of `lf1` begins
+val lf2 = Lifetime[{}]() // region of `lf2` begins
+// both `lf1` and `lf2` are available here
+lf1.consume() // region of `lf1` ends
+// `lf2` is still available here, but `lf1` is not
+lf2.consume() // region of `lf2` ends
+// neither are available anymore
 ```
-TODO: TWO INTERTWINED LIFETIMES
+
+If two lifetimes are intertwined and the first lifetime owns the second lifetime, then the second lifetime becomes unavailable after the first lifetime is used.
+Any subsequent use of the second lifetime results in an error.
+
+```Scala
+val lf1 = Lifetime[{}]() // region of `lf1` begins
+val lf2 = Lifetime[lf1.Owners]() // region of `lf2` begins
+// both `lf1` and `lf2` are available here
+lf1.consume() // region of `lf1` ends
+// `lf2` is not available anymore because its owner `lf1` expired
+lf2.consume() // error: Linear value lf1 is mentioned in the type of lf2 but is either not in scope or used already.
 ```
 
 ## Box Ownership
@@ -72,26 +104,44 @@ def newBox[@scinear.HideLinearity T, Owner^](resource: T): Box[T, Owner] = ...
 
 The `newBox` function takes a resource instance as an argument and a capture set of owners as type arguments, and it returns a box that holds the given resource and is owned by the set of owners specified by the `Owner^` type argument.
 
-Note that the program supplies the resource, and imem assumes that the resource is not copied or stored elsewhere.
-If the resource is linear, such as an instance of `Box`, the Scinear plugin statically enforces that the resource value is reachable only from the expression passed to `newBox`.
-However, the resource may be non-linear.
-In that case, it is the program’s responsibility to handle any side effects that arise if the resource has additional aliases.
+Note that the program provides the resource, and imem assumes that the resource is neither copied nor stored elsewhere.  
+The resource must be linear, such as an instance of `Box`, and the Scinear plugin statically ensures that the resource value is reachable only from the expression passed to `newBox`.
+However, if the resource is a linear class that contains non-linear fields, then the program is responsible for handling any side effects that arise from parts of the resource that have additional aliases.
+More details about this are explained in the [soundness section](./soundness.md#box).
+
+The following is an example of creating a box with a lifetime owner set:
 
 ```Scala
-TODO: AN EXAMPLE OF CREATING A SIMPLE BOX WITH ONE LIFETIME, THEN WITH TWO.
+val box1 = newBox[LinearInt, {lf1}](LinearInt(42))
+val box2 = newBox[LinearInt, {lf1, lf2}](LinearInt(42))
 ```
 
 As with other linear types, boxes can also appear as fields of other linear classes:
 
 ```Scala
-TODO: AN EXAMPLE OF A BOX AS A FIELD OF A CLASS
+// `O^` is the owner set of the box fields in `BoxPair` and, consequently, the owner set of the `BoxPair` itself.
+class BoxPair[O^](...) extends scinear.Linear:
+  val first: Box[Int, O] ...
+  val second: Box[Int, O] ...
+end BoxPair
 ```
 
 The primary way to use boxes is to define data-structure classes as linear, but instead of storing them directly as fields within one another, to store a `Box` that wraps the type.
-This approach simplifies working with the data structure compared to an entirely linear implementation, while also guaranteeing safe memory management in contrast to a non-linear version.
+This approach simplifies working with the data structure compared to an entirely linear implementation, while also guaranteeing safe memory management and alias control in contrast to a non-linear version.
+
+The following section provides an overview of the internal structures that define a linked list using imem:
 
 ```Scala
-TODO: SIMPLE LINKED LIST SIMILAR TO THE LINEAR CHAPTER BUT WITH BOXES
+type Link[T <: scinear.Linear, O^] = Option[Box[Node[T, O], O]]
+
+class Node[T <: scinear.Linear, O^](...) extends scinear.Linear:
+  val elem: Box[T, O] ...
+  val next: Box[Link[T, O], O] ...
+end Node
+
+class List[T <: scinear.Linear, O^](...) extends scinear.Linear:
+  val head: Box[Link[T, O], O] ...
+end List
 ```
 
 The [Evaluation](../evaluation/index.md) chapter details more about implementing a linked list using imem. 
@@ -102,16 +152,23 @@ The [Evaluation](../evaluation/index.md) chapter details more about implementing
 Boxes are useful when they are nested, either directly, `Box[Box[...], ...]`, when one box's resource is another box, or indirectly when the resource is a class that has boxes as fields.
 
 ```Scala
-TODO: FOR ALL THE CASES BELOW, DEFINE TWO LIFETIME lf1, AND lf2 THAT IT IS NOT SHOWN WHEN THEY ARE USED.
-TODO: A NESTED DIRECTLY BOX WITH SAME OWNERS
-TODO: A NESTED DIRECTLY BOX WITH DIFFERENT OWNERS
-TODO: AN INDIRECT NESTED BOX WITH DIFFERENT OWNERS
+// Two nested boxes, with the same owners, which is {lf1}:
+val outerBox1 = newBox[Box[LinearInt, {lf1}], {lf1}](newBox(LinearInt(1)))
+
+// Two nested boxes, with different owners, which are {lf1} for the outer box and {lf2} for the inner box:
+val outerBox2 = newBox[Box[LinearInt, {lf2}], {lf1}](newBox(LinearInt(1)))
 ```
 
 As illustrated in the example above, nested boxes may have different owners, which means that an inner box can be owned by a different set of lifetimes than the outer box. This situation may appear to allow the owners of the inner box to expire before those of the outer box, which would result in a dangling box:
 
 ```Scala
-TODO: THE LAST EXAMPLE OF TWO DIRECTED NESTED BOXES BUT THE INNER BOX LIFETIME IS USED
+// Two nested boxes, with different owners, which are {lf1} for the outer box and {lf2} for the inner box:
+val outerBox2 = newBox[Box[LinearInt, {lf2}], {lf1}](newBox(LinearInt(1)))
+
+// expiring the inner box owner, which is {lf2}:
+lf2.consume()
+
+// Can the program access `outerBox2` here?
 ```
 
 Although this situation is possible, as shown above, it does not lead to dangling boxes.
@@ -122,7 +179,13 @@ As a demonstration, in the previous example, the outer box does not mention the 
 However, Scinear still rejects any attempt to refer to the outer box after that the lifetime capability expires:
 
 ```Scala
-TODO: THE LAST EXAMPLE OF TWO DIRECTED NESTED BOXES BUT THE INNER BOX LIFETIME IS USED AND SHOWED THAT THE OUTER BOX CANNOT BE MENTIONED
+// Two nested boxes, with different owners, which are {lf1} for the outer box and {lf2} for the inner box:
+val outerBox2 = newBox[Box[LinearInt, {lf2}], {lf1}](newBox(LinearInt(1)))
+
+// expiring the inner box owner, which is {lf2}:
+lf2.consume()
+
+outerBox2.consume() // error: Linear value lf2 is mentioned in the type of outerBox2 but is either not in scope or used already.
 ```
 
 ### Modifying Boxes
@@ -179,11 +242,6 @@ def moveBox[@scinear.HideLinearity T, Owner^, NewOwner^, ...](
 ```
 
 The `moveBox` function takes the current and the new owner as type parameters and returns a new `Box` instance with the updated owner.
-
-```Scala
-TODO: AN EXAMPLE OF MOVING THAT ESCAPES THE MOVED BOX
-```
-
 As with `setBox`, the `self` parameter captures the universal capability, but the returned box does not.
 Otherwise, the box instance resulting from the move would be unable to escape the scope of the original reference, which would make it impractical.
 
@@ -228,7 +286,12 @@ TODO: A DIAGRAM FOR EACH STEP OF THE MOVING PROCESS
 Here is an example of moving the inner box of a nested box `Box[Box[Int, {lf1}], {lf1}]` to `lf2`:
 
 ```Scala
-TODO: AN EXAMPLE OF MOVING `Box[Box[Int, {lf1}]{lf1}]` to `lf2`
+val outerBox = newBox[Box[LinearInt, {lf1}], {lf1}](newBox(LinearInt(42)))
+
+val movedInnerBox = derefForMoving[Box[LinearInt, {lf1}], ..., Box[LinearInt, {lf2}], ...](
+  outerBox,
+  inner => moveBox[LinearInt, {lf1}, {lf2}, ...](inner)
+)
 ```
 
 ## Resource Ownership
@@ -249,10 +312,3 @@ As a result, the returned value cannot be leaked and is bound to the same scope 
 
 For example, in `setBox`, the returned type is `Box[T, Owner]^{self}`.
 In `swapBox`, both arguments, `self: Box[T, Owner]^` and `other: Box[T, OtherOwner]^`, capture the universal capability and the return types `(Box[T, Owner]^{self}, Box[T, OtherOwner]^{other})` captures each argument respectively.
-
-## Memory Overview
-
-Based on *Direct box uniqueness* and *No dangling boxes*, the object graph of boxes that are reachable from available variables forms a tree structure at runtime.
-The following diagram illustrates this tree:
-
-TODO: A SIMPLE DIAGRAM OF BOXES FORMING A TREE
