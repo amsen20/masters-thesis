@@ -58,6 +58,7 @@ This traversal follows the typing rules described in the [main linearity paper](
 The recursive `checkNode` function maintains an assumption list when it reaches an AST node during traversal.  
 This assumption list contains the linear variables that are accessible at that node.
 The `checkNode` function then recursively visits the children of the node in traversal order and ensures that no linear value is used more than once.
+In the case of children with no order between them, the intersection of their returned assumption lists is the resulting assumption list.
 If the AST node is an expression, the function removes the used linear variables from the assumption list and returns the remaining list.
 If the AST node is a block, a function definition, or a type definition, the `checkNode` function verifies that the remaining assumption list is empty.
 This requirement ensures that every linear value is used exactly once.
@@ -86,8 +87,8 @@ Finally, when control returns to the block node, `y` is still present in the ass
 
 In this pass, Scinear checks the following properties:
 
-- The [linear fields](./defining-linear-types.md#internal-and-external-fields) of a linear class are divided into two disjoint sets: internal fields and external fields.
+- As discussed in the [internal and external fields section](./defining-linear-types.md#internal-and-external-fields), the linear fields of a linear class are divided into two disjoint sets: internal fields and external fields.
   Internal fields are not used outside the class definition, and external fields are not used within the class definition.
-- [Polymorphic](./polymorphism.md#polymorphic-function-calls) type parameters that are instantiated with linear types are either annotated with `@HideLinearity` or have a linear upper bound.
+- As discussed in the [polymorphism section](./polymorphism.md#polymorphic-function-calls), polymorphic type parameters that are instantiated with linear types are either annotated with `@HideLinearity` or have a linear upper bound.
 
 This pass is implemented as a conventional pattern-matching traversal.
