@@ -12,13 +12,12 @@ For simplicity, this section only concerns programs that do not cast linear type
 In the absence of `@HideLinearity`, references to a linear type are not stored within a nonlinear type, other than `Option` and `Tuple`, due to the [nonlinear-type-field-rule](./using-linear-types.md#fields-in-other-types).
 Additionally, linear values are accessible only by other linear values or by linear variables.
 
-Reachable linear values form a tree rooted in the current execution scope.
-The children of this root consist of the linear variables available in the scope, while the remaining nodes represent linear values stored within other linear values.
+Reachable linear values form a tree rooted in the program environment.
+The program environment includes linear variables available in the scope, while the remaining nodes represent linear values stored within other linear values.
 Furthermore, linear values may refer to nonlinear values.
 The following figure illustrates this memory overview:
 
-<!-- TODO: change the diagram -->
-![Memory model overview](../img/linear-memory-overview.png){: width="700"}
+![Memory model overview](../img/linear-memory-overview.drawio.svg){: width="700"}
 
 ### Why
 

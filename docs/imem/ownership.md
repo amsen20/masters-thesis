@@ -273,15 +273,11 @@ It then either calls `derefForMoving` on those boxes to explore their resources 
 Therefore, the box instance passed as the `self` argument expires after `derefForMoving`, and there is no way to recover it.
 This behavior is intentional, and the [*direct-box-lemma*](./soundness.md#satisfying-well-formedness-properties) proves that moving interfaces in the imem memory management implementation preserves the [*Direct Box Uniqueness*](./memory-management.md#properties_1) property.
 
-TODO: A DIAGRAM OF DANGLING REFERENCE WHEN MOVING
-
 In imem, moving is a sequence of operations applied to the values referenced by available variables:
 
 - Dereference a box using `derefForMoving`
 - Decompose the linear value into its fields
 - Move the box to a new owner
-
-TODO: A DIAGRAM FOR EACH STEP OF THE MOVING PROCESS
 
 Here is an example of moving the inner box of a nested box `Box[Box[Int, {lf1}], {lf1}]` to `lf2`:
 

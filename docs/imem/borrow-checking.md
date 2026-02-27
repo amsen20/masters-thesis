@@ -638,4 +638,4 @@ Based on these two features, the context carries the union of the owners of all 
 
 The following diagram illustrates the object graph described in [the runtime section](./runtime.md#object-graph), extended by introducing value holders as linear values and enforcing ownership and borrow-checking rules.
 
-![Imem Memory Overview](../img/imem-memory-overview.png){: width="600"}
+![Imem Memory Overview](../img/imem-runtime-static.drawio.svg){: width="600"}

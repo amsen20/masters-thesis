@@ -82,8 +82,6 @@ $$
 \forall l \in \text{dom}(\sigma_L), \exists n \ge 0 \text{ s.t. } Par^{n}(l) \in \text{range}(\rho_L)
 $$
 
-TODO: A DIAGRAM OF HOW LINEAR MEMORY LOOKS LIKE
-
 ### An Example
 
 The following is a two-item list expressed with linear values:
@@ -837,7 +835,7 @@ As a result, if an immutable reference is reachable, then it cannot reach any lo
 
 The following diagram demonstrates the reachable part of a well-formed memory:
 
-TODO: A GRAPH OF BOXES, MUTABLE AND IMMUTABL REFERENCES.
+![Imem Memory With No Holder](../img/memory-management-no-holder.drawio.svg){: width="700"}
 
 ### Memory with imem References And Lifetimes
 
@@ -1199,10 +1197,10 @@ imem extends the previous model with [lifetimes](#memory-with-imem-references-an
 Based on the well-formedness rules, whenever a mutable or immutable reference points to a resource in a box, a value holder points to that box.
 Similarly, whenever an immutable or mutable reference points to the resource of a mutable reference, a value holder points to that mutable reference.
 
-By adding value holders and their connections to the resources they reference to the graph described in the [previous part](#overview-1), the graph remains a DAG.
+By adding value holders and their connections to the resources they reference to the graph described in the [previous part](#overview), the graph remains a DAG.
 The following diagram illustrates the available and reachable parts of a well-formed imem memory:
 
-TODO: ADD A DIAGRAM FOR IMEM MEMORY
+![Imem Memory With No Holder](../img/memory-management-with-holder.drawio.svg){: width="700"}
 
 ### An Example
 
@@ -1252,8 +1250,6 @@ The variable \(\texttt{list}\) points to a location that contains a box referenc
 This first element is stored at \(l_1\) and is a linear value composed of two boxed fields.
 The first field, located at \(l_{\mathsf{h1}}\), is a box that points to a nonlinear integer value.
 The second field, located at \(l_{\mathsf{t1}}\), is a box that points to the second element of the list.
-
-TODO: A DIAGRAM OF HOW IT LOOKS
 
 The following shows the result of applying the \( \mathsf{borrowMutBox} \) and \( \mathsf{borrowImmutBox} \) operations to the first and second elements, respectively, while keeping the memory well formed.
 
@@ -1319,8 +1315,6 @@ In this configuration, imem allows the program to hold a mutable reference to th
 If the program accesses the box that points to the first element, the access must pass through the hold at location \(l_{\mathsf{list}}\). This action expires lifetime \(\beta\), which in turn causes both the mutable reference and the immutable reference to become unavailable.
 
 Similarly, accessing the mutable reference passes through the hold at location \(l_{\mathsf{mut}}\). This access expires lifetime \(\gamma\), which results in the immutable reference becoming unavailable.
-
-TODO: A DIAGRAM OF HOW IT LOOKS NOW
 
 ### Memory Management
 

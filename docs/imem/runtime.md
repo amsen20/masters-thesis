@@ -272,8 +272,7 @@ The borrow checking section explains why `refMutInner` and `refImmutOuter`, whic
 Imem objects follow the same tree structure as linear objects.
 The following is a demonstration of imem’s memory overview, if the program does not violate imem dynamic verification, and scinear rules:
 
-<!-- TODO: MIGHT NEED TO CHANGE IT AND ADD VALUE HOLDERS TO IT -->
-![Imem Memory Overview with No Static Rules](../img/imem-memory-overview-no-static.png){: width="600"}
+![Imem Memory Overview with No Static Rules](../img/imem-runtime-no-static.drawio.svg){: width="600"}
 
 This illustration shows only reachable boxes and references whose tags remain in their corresponding internal borrow stacks.
 In other words, the diagram represents the state of live references and boxes at a specific point during the program’s execution.

@@ -243,7 +243,11 @@ However, in some cases, the program needs to use such linear values, and it is a
 To push a new node onto the list, the program must update the box that the list head link points to, or in Scala terms, `list.head.get`, so that it points to the newly created node.
 In addition, the newly created node must point to the node that was previously the first node in the list, which is the node referenced by the `list.head.get` box.
 
-<!-- TODO: A DIAGRAM OF HOW THE BOXES SHOULD CHANGE DURING PUSHING STEP BY STEP (3 STEPS) -->
+The following diagram illustrates the list structure:
+![List Overview](../img/list-operations-list.drawio.svg){: width="700"}
+
+Moreover, the following diagram demonstrates what the result would be after pushing the new element:
+![List After Push](../img/list-operations-push.drawio.svg){: width="700"}
 
 If the list is empty, only the first modification is enough, which is setting `list.head.get` to point to the new node.
 
@@ -391,13 +395,14 @@ Also, the function returns an `Option` to a `Box` to an element.
 The `Box` lifetime capture set is `O3`.
 
 To pop an element from the list, the program must update the box that the head link points to, in Scala terms, `list.head.get`, so that it points to the second node, and the function must return a box that points to the first node’s element.
+
+The following diagram illustrates the state of the list after a `pop` operation:
+![List After Pop](../img/list-operations-pop.drawio.svg){: width="700"}
+
 To preserve the imem memory well-formedness requirement of having only one direct box, the first node’s next link must no longer point to the second node.
-
-<!-- TODO: A DIAGRAM OF HOW THE BOXES SHOULD CHANGE DURING POPPING STEP BY STEP (3 STEPS) -->
-
 If the list is empty, a pop operation returns `None`.
-
 If the list is nonempty, the function first creates a temporary box and swaps it with the list’s head.
+
 After this swap, the temporary box points to the first node, and the list’s head points to nothing.
 Next, the `pop` function accesses the first node and swaps the first node’s box that points to the link that is pointing to the second node with the list’s head.
 After this swap, the temporary box points to the first node, the list’s head points to the remainder of the list without the first node, and the first node points to nothing.
@@ -986,19 +991,15 @@ To achieve this, the `nextMI` function performs the following steps:
 3. Mutably borrow the node’s box that contains the link to the next node.
 4. Update the iterator’s box to hold the newly borrowed mutable reference that points to the link of the next node.
 
-<!-- TODO: A DIAGRAM DISPLAYING THE STATE AND THE UPDATES AND NEW THINGS HAVE TO BE CREATED -->
+The following diagram illustrates the iterator structure and the operations required for the `nextMI` operation:
+![List After Pop](../img/list-operations-itermut.drawio.svg){: width="700"}
 
 Operations 2 and 3 involve borrowing new mutable references, `nodeElemMutRef` and `nextLinkMutRef`, from the fields of the node reached by the iterator’s box.
 Operation 4 then updates the iterator’s box, `iter.boxToLink`, which the function must access in order to reach the current node.
 As a result, the function must both access the resource held by the iterator’s box, which requires borrowing it, and update that resource using the `write` function.
-
-<!-- TODO: A DIAGRAM DISPLAYING THE TEMPORARY BOX AFTER SWAP -->
 
 Borrowing a box’s resource, or a box reachable from that resource, and then updating the same box, which is `iter.boxToLink` in this case, would expire the borrowed references due to the [reaching properties](../imem/memory-management.md).
 To avoid this issue, the `nextMI` function introduces a temporary box, `tempBoxToLink`, to temporarily hold the resource of the iterator’s box, `iter.boxToLink`.
 The function swaps the resources of `iter.boxToLink` and `tempBoxToLink`, which leaves the iterator’s box pointing to `None`.
 It then accesses the resource in `tempBoxToLink`, accesses the node if it exists, and borrows the box containing the node’s element as well as the box containing the link to the next node.
 Once both required references are available, namely the mutable reference to the current element and the mutable reference to the link to the next node, the function updates the iterator’s box with the latter and returns the former.
-
-<!-- TODO: A DIAGRAM DISPLAYING THE FINAL STATE -->
-
