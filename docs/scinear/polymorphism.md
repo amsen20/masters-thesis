@@ -98,14 +98,30 @@ end checkIdentity
 
 Scinear provides a method to bypass linearity rules in both [polymorphic promotion](#polymorphic-promotion) and [polymorphic function calls](#polymorphic-function-calls) using the `@HideLinearity` annotation.
 With this annotation, the program can store linear instances in polymorphic nonlinear classes.
+In the program below, `nonLinearInt` is an instance of the `NonlinearWrapper` class, where the type parameter `T` is instantiated with `LinearInt`.
+
 ```Scala
-TODO: AN EXAMPLE OF STORING LINEAR INSTANCES IN NONLINEAR CLASSES.
+class LinearInt(val value: Int) extends scinear.Linear
+class NonlinearWrapper[@scinear.HideLinearity T](val content: T)
+
+val linearResource = LinearInt(17)
+val nonLinearInt = NonlinearWrapper[LinearInt](linearResource)
 ```
+
 Also, the program can pass linear instances to polymorphic functions as polymorphic parameters.
 This would enable the function to use the parameter without linear restrictions.
+
 ```Scala
-TODO: AN EXAMPLE OF PASSING A LINEAR INSTANCE TO A FUNCTION.
+def log[@scinear.HideLinearity T](linearVal: T): T =
+  println(linearVal)
+  linearVal
+
+val x = LinearInt(42)
+val y = log(x)
 ```
+
+In the example above, the `log` function hides the linearity of the type parameter `T` so that it can print the value and then return it, thereby preserving access to it.
+
 Similar to Rust's `unsafe` keyword, `@HideLinearity` allows libraries like imem to provide safe external interfaces while breaking safety rules internally.
 
 Strict adherence to linearity rules prevents holding multiple references to a single linear object, which is essential to `imem`'s use case.
