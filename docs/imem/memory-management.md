@@ -103,14 +103,21 @@ $$
 In Scala, using Scinear, the following code constructs the memory described above:
 
 ```Scala
-TODO: SCINEAR CODE THAT CONSTRUCTS THE LIST
+trait LinearList extends scinear.Linear
+class Cons(val head: Int, val tail: LinearList) extends LinearList
+class Nil() extends LinearList
+
+val list = Cons(42, Cons(99, Nil()))
 ```
 
 To allow the program to access the second element (for example, for reading) without ever creating a non-well-formed memory state,
 it must deconstruct the first element of the linear list, store that value in a separate variable, and then retain a linear variable that refers to the second element.
+The process in Scala is as follows:
 
 ```Scala
-TODO: SCINEAR CODE THAT ACCESSES THE SECOND ELEMENT
+val (elem1, tail) = Cons.unapply(list).get
+tail match
+  case Cons(elem2, tail2) => ...
 ```
 
 After accessing the second element, the memory would become the following:
@@ -123,10 +130,11 @@ $$
 \rho'_{NL} = \{ \texttt{head} \mapsto 42 \}
 $$
 
-To change the first element of the list, for example, by multiplying it by two, the program must reconstruct the list after deconstructing the first element and replacing it with the new value.
+To change the first element of the list, for example, by multiplying it by two, the program must reconstruct the list after deconstructing the first element and replacing it with the new value, as shown below:
 
 ```Scala
-TODO: SCINEAR CODE THAT RECONSTRUCTS THE LIST
+val (head, tail) = Cons.unapply(list).get
+val listPrime = Cons(head * 2, tail)
 ```
 
 This results in:
@@ -164,7 +172,10 @@ In Scinear, `@HideLinearity` allows a program to construct memories whose linear
 For example, the following code creates a cyclic data structure between two linear values.
 
 ```Scala
-TODO: AN EXAMPLE OF `@HiderLinearity` CREATING CYCLIC DATA STRUCTURES
+def cycle[@HideLinearity T >: LinearLink <: LinearLink](): LinearLink =
+  var x: T = LinearLink(None) // due to `@HideLinearity`, ok to have a `var` of type `T`
+  x = LinearLink(Some(x))
+  x
 ```
 
 imem uses `@HideLinearity` to provide a more expressive approach while still performing safe memory management statically.
