@@ -151,7 +151,20 @@ This limitation is particularly important when the resource in a box is a linear
 This is illustrated by the following example:
 
 ```Scala
-TODO: A LINEAR CLASS WITH LINEAR FIELDS AND BEING A BOX'S RESOURCE. WHEN THE PROGRAM ACCESS THE RESOURCE IT CAN LEAK THE FIELDS.
+class LeakyPair(_first: LinearInt, _second: LinearInt) extends scinear.Linear:
+  val first: LinearInt = _first // leaky because does not capture `{this}`
+  val second: LinearInt = _second // leaky because does not capture `{this}`
+end LeakyPair
+
+val lf = Lifetime[{ctx}]()
+val box: Box[LeakyPair, {lf}] = newBox(LeakyPair(LinearInt(1), LinearInt(2)))
+val (immutRef, boxHolder) = borrowImmutBox[LeakyPair, {lf}, {ctx}, lf.Key, lf.Owners, WC, MC](box)
+
+val leakedField = read[LeakyPair, lf.Owners, LinearInt, {ctx}, WC, MC](
+  immutRef,
+  resource =>
+    resource.first // ! leaking the field of the resource of the box
+)
 ```
 
 If the class definition does not follow the escape-checking propagation rules, a program may leak the class fields.
@@ -201,7 +214,16 @@ In other words, the program does not store the Scala reference of the resource, 
 In the following example, the program creates two boxes that refer to the same resource:
 
 ```Scala
-TODO: CREATE TWO BOXES WITH TWO LINEAR RESOURCE THAT HAS A FIELD POINTING TO THE SAME NONLINEAR OBJECT
+class LinearArray(_first: Array[Int]) extends scinear.Linear:
+  val first: Array[Int]^{this} = _first
+end LinearArray
+
+val lf = Lifetime[{ctx}]
+val arr: Array[Int] = Array(1, 2, 3)
+
+val arrBox1: Box[LinearArray, {lf}] = newBox(LinearArray(arr))
+val arrBox2: Box[LinearArray, {lf}] = newBox(LinearArray(arr))
+//! both resource of the `arrBox1` and `arrBox2` point to the same array
 ```
 
 imem controls only access to a resource in a box, not the resource reaching memory.
@@ -218,7 +240,13 @@ One important guideline for linear memory is to replace direct linear fields wit
 For example, in the following `LinearBinTree` class, the fields have type `LinearBinTree`:
 
 ```Scala
-TODO: A LINEAR_BIN_TREE CLASS THAT HAS TWO FIELDS LEFT AND RIGHT BOTH ARE LINEAR_BIN_TREE.
+class LinearBinTree(
+	_left: Option[LinearBinTree],
+	_right: Option[LinearBinTree]
+) extends scinear.Linear:
+	val left: Option[LinearBinTree]^{this} = _left
+	val right: Option[LinearBinTree]^{this} = _right
+end LinearBinTree
 ```
 
 According to imem’s guarantees, this implementation is correct.
@@ -226,13 +254,76 @@ However, when the program has access to the children of a `LinearBinTree` instan
 It also cannot reference both of a node's children simultaneously or iterate over the tree without consuming the tree and destructing and reconstructing it during the traversal.
 
 ```Scala
-TODO: A BOX THAT POINTS TO A TREE WITH THREE NODES AND ACCESSING THE LEAF IS NOT POSSIBLE, JUST HAVING A REFERENCE TO THE ROOT IS POSSIBLE
+class LinearBinTree(
+	_left: Option[LinearBinTree],
+	_right: Option[LinearBinTree]
+) extends scinear.Linear:
+	val left: Option[LinearBinTree]^{this} = _left
+	val right: Option[LinearBinTree]^{this} = _right
+end LinearBinTree
+
+// a three node binary tree
+val leftLeaf = LinearBinTree(None, None)
+val rightLeaf = LinearBinTree(None, None)
+val rootNode = LinearBinTree(Some(leftLeaf), Some(rightLeaf))
+
+val lf = Lifetime[{ctx}]()
+val treeBox = newBox[LinearBinTree, {lf}](rootNode)
+
+val (treeRef, treeHolder) = borrowImmutBox[LinearBinTree, {lf}, {ctx}, lf.Key, lf.Owners, WC, MC](treeBox)
+
+read[LinearBinTree, lf.Owners, Unit, {ctx}, WC, MC](
+  treeRef,
+  root =>
+    root.left // ! Accessing this node is only possible
+              // ! in here, the program cannot have a
+              // ! reference to this node.
+    ()
+)
 ```
 
-The following example shows that when a `LinearBinTree` class refers to its children through `Box` instances, it is possible to hold a mutable reference to one child and an immutable reference to the other at the same time.
+The following example shows that when a `LinearBinTree` class refers to its children through `Box` instances, it is possible to hold an immutable reference to both children at the same time.
 
 ```Scala
-TODO: LinearBinTree WITH BOXES AS FIELDS AND TWO REFERENCES, AN IMMUTABLE REFERENCE TO LEFT CHILD AND MUTABLE REFERENCE TO RIGHT CHILD.
+class LinearBinTree[O^](
+  _left: Box[Option[LinearBinTree[O]], O],
+  _right: Box[Option[LinearBinTree[O]], O]
+) extends scinear.Linear:
+  val left: Box[Option[LinearBinTree[O]], O]^{this} = _left
+  val right: Box[Option[LinearBinTree[O]], O]^{this} = _right
+end LinearBinTree
+
+val lf = Lifetime[{ctx}]()
+
+val leftLeaf = LinearBinTree[{lf}](newBox(None), newBox(None))
+val rightLeaf = LinearBinTree[{lf}](newBox(None), newBox(None))
+val rootNode = LinearBinTree[{lf}](
+  newBox(Some(leftLeaf)),
+  newBox(Some(rightLeaf))
+)
+val treeBox = newBox[LinearBinTree[{lf}], {lf}](rootNode)
+
+val lfRef = Lifetime[{ctx}]()
+val (rootImmutRef, rootHolder) = borrowImmutBox[LinearBinTree[{lf}], {lf}, {ctx}, lfRef.Key, lfRef.Owners, {WC}, {MC}](treeBox)
+val leftImmutRef = read[LinearBinTree[{lf}], lfRef.Owners, ImmutRef[Option[LinearBinTree[{lf}]], {lf, ctx}], {ctx}, {WC}, {MC}](
+  rootImmutRef,
+  ctx ?=> root =>
+    val (leftImmutRef, leftHolder) = borrowImmutBox[Option[LinearBinTree[{lf}]], {lf}, {ctx}, NeverUsableKey, {ctx}, {WC}, {MC}](root.left)
+    leftHolder.consume()
+    leftImmutRef
+)
+
+val rightImmutRef = read[LinearBinTree[{lf}], lfRef.Owners, ImmutRef[Option[LinearBinTree[{lf}]], {lf, ctx}], {ctx}, {WC}, {MC}](
+	rootImmutRef,
+	ctx ?=> root =>
+		val (rightImmutRef, rightHolder) = borrowImmutBox[Option[LinearBinTree[{lf}]], {lf}, {ctx}, NeverUsableKey, {ctx}, {WC}, {MC}](root.right)
+		rightHolder.consume()
+		rightImmutRef
+)
+
+leftImmutRef // the program has a reference to the left child of the root
+rightImmutRef // the program has a reference to the right child of the root
+rootImmutRef // the program has a reference to the root
 ```
 
 ##### Owner set
@@ -262,7 +353,16 @@ There is no static enforcement that restricts valid programs to these two cases.
 This means that a program can misuse these parameters and break imem’s guarantees:
 
 ```Scala
-TODO: A BORROWING THAT SET THE KEY AS OBJECT AND USE AN OBJECT INSTANCE TO OPEN THE HOLDER.
+val lf = Lifetime[{ctx}]()
+val box: Box[LinearInt, {lf}] = newBox(LinearInt(42))
+
+val (immutRef, holder) = borrowImmutBox[LinearInt, {lf}, {ctx}, Object, lf.Owners, WC, MC](box) // ! borrowing using `Object` as the key type
+
+// unlocking the holder using an instance of `Object`
+val retrievedBox = unlockHolder(Object(), holder)
+
+immutRef // ! the program has access to the reference
+retrievedBox // ! the program has access to the box as well
 ```
 
 This constraint is not enforced statically because there is no way to use a path as a type parameter and require other type parameters to be path-dependent type members of that parameter.
