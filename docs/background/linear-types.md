@@ -1,6 +1,6 @@
 # Linear types
 
-The paper *Linear Types Can Change the World* proposes linear types to address a problem in the way functional programming languages model updates to the *world*.
+The paper [*Linear Types Can Change the World*](https://www.researchgate.net/profile/Philip-Wadler/publication/2429119_Linear_Types_Can_Change_the_World/links/6410b420315dfb4cce7cf9bc/Linear-Types-Can-Change-the-World.pdf) proposes linear types to address a problem in the way functional programming languages model updates to the *world*.
 Here, the *world* refers to the large program state around which functionality is built, for example, the file system in a program that performs many file-system operations.
 In functional programming languages, the program can duplicate or discard this state at any point.
 However, both actions may lead to performance and correctness problems.  
