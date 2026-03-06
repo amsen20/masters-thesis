@@ -14,7 +14,7 @@ That is, $deref(r) = t$.
 
 ### Goals
 
-imem performs borrow checking to ensure that the following well-formedness [properties](./memory-management.md#properties_1) are satisfied:
+imem performs borrow checking to ensure that the following well-formedness [properties](./memory-management.md#properties-1) are satisfied:
 
 - ***Borrowing Validity:***
   The implementation implication of this property is that during execution, for every immutable or mutable reference \(r \in \{\text{ImmutRef}[T, O'], \text{MutRef}[T, O']\}\), there is a box \(b : \text{Box}[T, O]\) that \(r\) is borrowed from, meaning \(deref(b) = deref(r)\) and \(O \subset O'\).
@@ -498,7 +498,7 @@ In the error message above, the compiler reports an error because the capability
 ## Reference Owner Aggregation
 
 imem implements Reference Owner Aggregation to ensure that program memory follows the [Stacked Borrows Model](../background/stacked-borrows.md).
-In other words, it ensures that the [reaching properties](./memory-management.md#properties_1) are not violated.
+In other words, it ensures that the [reaching properties](./memory-management.md#properties-1) are not violated.
 
 ### Box and Reference Holding Insufficience
 

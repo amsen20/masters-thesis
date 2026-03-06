@@ -4,14 +4,14 @@ This section explains how imem statically manages ownership of boxes and resourc
 
 ## Ownership Goals
 
-Ownership management in imem's implementation aims to satisfy the following [properties](./memory-management.md#properties_1) of a well-formed imem memory:
+Ownership management in imem's implementation aims to satisfy the following [properties](./memory-management.md#properties-1) of a well-formed imem memory:
 
 - ***No dangling boxes:***
-  This property is a subset of the [*No dangling references*](./memory-management.md#properties_1) well-formedness property.
+  This property is a subset of the [*No dangling references*](./memory-management.md#properties-1) well-formedness property.
   This subset states that, during execution, all boxes reachable from available variables are available themselves.
   The combination of ownership and borrow checking derives the full *No dangling references* property, and the details are described in the [soundness section](./soundness.md#satisfying-well-formedness-properties).
 
-- [***Direct Box Uniqueness***](./memory-management.md#properties_1)
+- [***Direct Box Uniqueness***](./memory-management.md#properties-1)
 
 ## Lifetime
 
@@ -172,7 +172,7 @@ lf2.consume()
 ```
 
 Although this situation is possible, as shown above, it does not lead to dangling boxes.
-Unlike the [*No dangling references*](./memory-management.md#properties_1) property defined in memory management, the imem implementation does not enforce that a box reaching another box, either directly or indirectly, has an owner lifetime that is a superset of the owner set of the box that is reached.
+Unlike the [*No dangling references*](./memory-management.md#properties-1) property defined in memory management, the imem implementation does not enforce that a box reaching another box, either directly or indirectly, has an owner lifetime that is a superset of the owner set of the box that is reached.
 However, the [*dangling-box-unavailability-lemma*](./soundness.md#satisfying-well-formedness-properties) proves that the implementation ensures a box becomes unavailable when it can reach a box with an expired lifetime in its owner set.
 
 As a demonstration, in the previous example, the outer box does not mention the expired lifetime capability directly.
@@ -271,7 +271,7 @@ It then either calls `derefForMoving` on those boxes to explore their resources 
 
 `derefForMoving` only returns the result of `moveAction`.
 Therefore, the box instance passed as the `self` argument expires after `derefForMoving`, and there is no way to recover it.
-This behavior is intentional, and the [*direct-box-lemma*](./soundness.md#satisfying-well-formedness-properties) proves that moving interfaces in the imem memory management implementation preserves the [*Direct Box Uniqueness*](./memory-management.md#properties_1) property.
+This behavior is intentional, and the [*direct-box-lemma*](./soundness.md#satisfying-well-formedness-properties) proves that moving interfaces in the imem memory management implementation preserves the [*Direct Box Uniqueness*](./memory-management.md#properties-1) property.
 
 In imem, moving is a sequence of operations applied to the values referenced by available variables:
 

@@ -23,8 +23,8 @@ The following figure illustrates this memory overview:
 
 Operations related to linear values fall into one of the following categories:
 
-* Reading a field or calling a method: This interaction expires the linear variables and designates the result of the method or field access as a new variable.
-* Creating a linear variable: This process results in a new linear variable.
+- Reading a field or calling a method: This interaction expires the linear variables and designates the result of the method or field access as a new variable.
+- Creating a linear variable: This process results in a new linear variable.
 Any linear variable used as an argument to the type constructor becomes a child of this new variable as a linear value.
 
 Based on the operations, the tree structure is consistently preserved.

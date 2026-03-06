@@ -32,7 +32,6 @@ nav:
     - Scala AST: background/scala-ast.md
     - Dependent types: background/dependent-types.md
     - Capturing types: background/capturing-types.md
-    - Dependent types: background/dependent-types.md
     - Rust: background/rust.md
     - Stacked Borrows Model: background/stacked-borrows.md
   - Scinear A linear type plugin for Scala:

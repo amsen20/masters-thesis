@@ -18,7 +18,7 @@ The following lists the memory [well-formedness properties](./memory-management.
   As a result, the implementation satisfies *No cyclic box*.
 
 - **No dangling references:**
-  The imem implementation does not fully satisfy the [theoretical definition](./memory-management.md#well-properties_1) of this property.
+  The imem implementation does not fully satisfy the [theoretical definition](./memory-management.md#well-properties-1) of this property.
   For example, if one `Box` instance reaches another `Box`, the capture set type argument of the reaching box is not always a superset of that of the reached box.
   The *dangling-box-unavailability lemma* shows that, although defining dangling boxes is possible, such boxes become unavailable once the box they reach expires.
 

@@ -176,8 +176,6 @@ Every call to `addByXDef` or `addByXFunc` would result in reading linear variabl
 
 To resolve this issue, Scinear enforces a specific rule for anonymous functions and all definitions, including local, class member, and top-level package member methods.
 
-<a name="scinear-usage-function-rule"></a>
-
 ***Scinear-usage-function-rule:***
 The body of a method or a function cannot refer to a non-local linear variable.
 In other words, the body can only refer to the linear variables defined as parameters or defined in the body itself.
